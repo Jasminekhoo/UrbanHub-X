@@ -1,0 +1,507 @@
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import {
+  TOWNSHIP_INFO,
+  RESIDENT_PROFILE,
+  SCHEMATIC_NODES,
+  SCHEMATIC_ROUTES,
+  INITIAL_HAZARDS,
+  CANDIDATE_INTERVENTIONS,
+  DURESS_ALERT_SEED,
+  INITIAL_CHECKPOINT_EVENTS,
+  solveKnapsackBudget,
+  calculateRouteCost
+} from '../data/nightSafeData';
+
+const NightSafeContext = createContext();
+
+export function NightSafeProvider({ children }) {
+  // Current demo role: 'select' | 'resident' | 'security' | 'property'
+  const [role, setRole] = useState(() => {
+    return localStorage.getItem('ns_role') || 'select';
+  });
+
+  // Current active sub-tab per role
+  const [residentTab, setResidentTab] = useState('home'); // 'home' | 'routes' | 'journey' | 'safety' | 'duress-setup' | 'duress-trigger' | 'sos' | 'checkpoints' | 'report' | 'my-reports' | 'settings'
+  const [securityTab, setSecurityTab] = useState('overview'); // 'overview' | 'alert-detail' | 'checkpoints' | 'history'
+  const [propertyTab, setPropertyTab] = useState('overview'); // 'overview' | 'hazard-map' | 'reports' | 'ranking' | 'budget' | 'route-impact' | 'lighting' | 'assumptions'
+
+  // Selected alert in Security view
+  const [selectedAlertId, setSelectedAlertId] = useState('AL-204');
+
+  // Selected hazard in Property view
+  const [selectedHazardId, setSelectedHazardId] = useState('HZ-101');
+
+  // Priority Model weights (Screen M4)
+  const [priorityWeights, setPriorityWeights] = useState({
+    severity: 40,
+    exposure: 35,
+    urgency: 25
+  });
+
+  // Resident Journey state
+  const [selectedRouteId, setSelectedRouteId] = useState('A');
+  const [journeyStatus, setJourneyStatus] = useState('idle'); // 'idle' | 'in_progress' | 'ended'
+  const [checkpointIndex, setCheckpointIndex] = useState(0);
+  const [passedCheckpoints, setPassedCheckpoints] = useState(['L-01']);
+  const [missedCheckpointPrompt, setMissedCheckpointPrompt] = useState(false);
+  const [checkinsEnabled, setCheckinsEnabled] = useState(true);
+
+  // Lighting simulation states
+  const [activeLamps, setActiveLamps] = useState(['L-01', 'L-02']);
+  const [heldBrightNode, setHeldBrightNode] = useState(null); // 'L-07' during duress alert
+
+  // Duress PIN configuration
+  const [duressConfig, setDuressConfig] = useState({
+    enabled: true,
+    pin: '9142'
+  });
+  const [duressTriggered, setDuressTriggered] = useState(false);
+
+  // Security Alerts list
+  const [alerts, setAlerts] = useState(() => {
+    const saved = localStorage.getItem('ns_alerts');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  // Hazards list
+  const [hazards, setHazards] = useState(() => {
+    const saved = localStorage.getItem('ns_hazards');
+    return saved ? JSON.parse(saved) : INITIAL_HAZARDS;
+  });
+
+  // Checkpoint events
+  const [checkpointEvents, setCheckpointEvents] = useState(() => {
+    const saved = localStorage.getItem('ns_checkpoints');
+    return saved ? JSON.parse(saved) : INITIAL_CHECKPOINT_EVENTS;
+  });
+
+  // Budget Optimization (Screen M5)
+  const [budget, setBudget] = useState(5000);
+  const [optimisedPlan, setOptimisedPlan] = useState(() => solveKnapsackBudget(5000));
+  const [appliedInterventions, setAppliedInterventions] = useState([]);
+  const [planApplied, setPlanApplied] = useState(false);
+
+  // Toast notifications
+  const [toast, setToast] = useState(null);
+
+  // Storyline Presenter Helper (Scenes 0 to 8)
+  const [storylineStep, setStorylineStep] = useState(0);
+  const [isStorylineDrawerOpen, setIsStorylineDrawerOpen] = useState(false);
+
+  // Sync to local storage
+  useEffect(() => {
+    localStorage.setItem('ns_role', role);
+  }, [role]);
+
+  useEffect(() => {
+    localStorage.setItem('ns_alerts', JSON.stringify(alerts));
+  }, [alerts]);
+
+  useEffect(() => {
+    localStorage.setItem('ns_hazards', JSON.stringify(hazards));
+  }, [hazards]);
+
+  useEffect(() => {
+    localStorage.setItem('ns_checkpoints', JSON.stringify(checkpointEvents));
+  }, [checkpointEvents]);
+
+  // Toast timer
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
+
+  const showToast = (message, type = 'info') => {
+    setToast({ message, type, id: Date.now() });
+  };
+
+  // Re-run knapsack when budget changes
+  useEffect(() => {
+    setOptimisedPlan(solveKnapsackBudget(budget));
+  }, [budget]);
+
+  // Navigation helper
+  const navigateRole = (newRole, optionalTab = null) => {
+    setRole(newRole);
+    if (optionalTab) {
+      if (newRole === 'resident') setResidentTab(optionalTab);
+      if (newRole === 'security') setSecurityTab(optionalTab);
+      if (newRole === 'property') setPropertyTab(optionalTab);
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // -------------------------------------------------------------
+  // RESIDENT ACTIONS
+  // -------------------------------------------------------------
+
+  // Start journey (Scene 2)
+  const startJourney = (routeId = selectedRouteId) => {
+    setSelectedRouteId(routeId);
+    setJourneyStatus('in_progress');
+    setCheckpointIndex(0);
+    setPassedCheckpoints(['L-01']);
+    setMissedCheckpointPrompt(false);
+
+    // Initial lamps ahead of resident
+    const route = SCHEMATIC_ROUTES[routeId];
+    setActiveLamps(route.nodes.slice(0, 3)); // L-01, L-02, L-03
+    setResidentTab('journey');
+    showToast(`Journey started along ${route.name}. Simulated smart-light corridor activated.`, 'success');
+  };
+
+  // Simulate passing checkpoint (e.g. L-03)
+  const simulatePassCheckpoint = (nodeId = 'L-03') => {
+    const route = SCHEMATIC_ROUTES[selectedRouteId];
+    const nodeIndex = route.nodes.indexOf(nodeId);
+    
+    if (nodeIndex !== -1) {
+      setCheckpointIndex(nodeIndex);
+      const passed = route.nodes.slice(0, nodeIndex + 1);
+      setPassedCheckpoints(passed);
+
+      // Light up corridor ahead, dim behind
+      const ahead = route.nodes.slice(nodeIndex, nodeIndex + 3);
+      setActiveLamps(ahead);
+
+      // Add to checkpoint audit event log
+      const newEvent = {
+        id: `CP-${Date.now().toString().slice(-4)}`,
+        checkpointId: nodeId,
+        checkpointName: SCHEMATIC_NODES.find(n => n.id === nodeId)?.name || nodeId,
+        residentName: RESIDENT_PROFILE.title,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        status: 'Passed',
+        source: 'Simulated Checkpoint Node'
+      };
+      setCheckpointEvents(prev => [newEvent, ...prev]);
+
+      showToast(`Checkpoint ${nodeId} passed. Forward illumination maintained.`, 'success');
+    }
+  };
+
+  // Simulate missed checkpoint prompt (Screen R8)
+  const simulateMissedCheckpoint = () => {
+    setMissedCheckpointPrompt(true);
+    showToast('Simulated: Checkpoint ping overdue. Confirmation prompt displayed.', 'warning');
+  };
+
+  const resolveMissedPrompt = (responseType) => {
+    setMissedCheckpointPrompt(false);
+    if (responseType === 'okay') {
+      showToast("Check-in confirmed: Resident marked 'I am okay'.", 'success');
+    } else if (responseType === 'help') {
+      setResidentTab('sos');
+    } else if (responseType === 'no_response') {
+      // Create follow up alert for security
+      const followUpAlert = {
+        id: `AL-${Date.now().toString().slice(-3)}`,
+        type: 'Missed Checkpoint / No Response',
+        severity: 'Medium',
+        resident: RESIDENT_PROFILE.title,
+        residentId: 'RES-8821',
+        location: 'Near Lamp L-03 (Boulevard Walkway)',
+        lastCheckpoint: 'L-02 · 9:09 PM',
+        alertReceived: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        locationFreshness: 'Simulated checkpoint overdue · Prompt unconfirmed',
+        status: 'Awaiting security acknowledgement',
+        lightingResponse: 'Simulated — path lights held active',
+        notes: ['Automatic prompt timed out after 90 seconds in simulation.'],
+        category: 'Checkpoint Overdue',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        isDuress: false
+      };
+      setAlerts(prev => [followUpAlert, ...prev]);
+      showToast('Simulated follow-up alert dispatched to Security Dashboard.', 'warning');
+    }
+  };
+
+  // End journey
+  const endJourney = () => {
+    setJourneyStatus('ended');
+    setActiveLamps([]);
+    setMissedCheckpointPrompt(false);
+    showToast('Journey ended. Simulated location sharing stopped.', 'info');
+  };
+
+  // Trigger Duress PIN discreetly (Scene 3 - Screen R6)
+  const triggerDuressPin = () => {
+    setDuressTriggered(true);
+
+    // Create AL-204 in shared alerts
+    const duressAlert = {
+      ...DURESS_ALERT_SEED,
+      alertReceived: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+
+    setAlerts(prev => {
+      // Avoid duplicate AL-204
+      const filtered = prev.filter(a => a.id !== 'AL-204');
+      return [duressAlert, ...filtered];
+    });
+
+    // Switch nearby schematic lights to held bright
+    setHeldBrightNode('L-07');
+    setActiveLamps(['L-06', 'L-07', 'L-08']);
+
+    // Subtly navigate or keep resident screen neutral
+    setResidentTab('home');
+    showToast('Request received. (UI remains neutral for user safety)', 'info');
+  };
+
+  // Trigger Overt SOS (Screen R7)
+  const triggerSos = (category = 'Personal Safety') => {
+    const newId = `AL-${Date.now().toString().slice(-3)}`;
+    const newAlert = {
+      id: newId,
+      type: 'Emergency SOS Alert',
+      severity: 'High',
+      resident: RESIDENT_PROFILE.title,
+      residentId: 'RES-8821',
+      location: 'Near Lamp L-04 (Boulevard)',
+      lastCheckpoint: 'L-03 · 9:12 PM',
+      alertReceived: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      locationFreshness: 'Last available demo location — not live tracking',
+      status: 'Awaiting security acknowledgement',
+      lightingResponse: 'Simulated — nearby route lights held at high brightness',
+      notes: [],
+      category,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      isDuress: false
+    };
+
+    setAlerts(prev => [newAlert, ...prev]);
+    setHeldBrightNode('L-04');
+    setActiveLamps(['L-03', 'L-04', 'L-08']);
+    showToast(`Demo SOS alert ${newId} dispatched to Security Operations.`, 'warning');
+  };
+
+  // Submit hazard report (Scene 5 - Screen R9)
+  const submitHazardReport = ({ category, location, severity, description, affectedNode = 'L-04' }) => {
+    const nextNum = hazards.length + 101;
+    const newId = `HZ-${nextNum}`;
+
+    const newHazard = {
+      id: newId,
+      title: `${category.split('/')[0].trim()} at ${location}`,
+      category,
+      location,
+      affectedNode,
+      routesAffected: affectedNode === 'L-04' ? ['A'] : ['B'],
+      severity,
+      pedestrianExposure: 'High',
+      urgency: severity === 'High' ? 'High' : 'Medium',
+      evidenceConfidence: 'Medium',
+      status: 'Reported',
+      source: 'Resident report',
+      timestamp: 'Just now · Demo data',
+      reportedBy: RESIDENT_PROFILE.title,
+      description: description || 'Reported by resident via mobile prototype form.',
+      estimatedCost: 1500,
+      pairedInterventionId: null
+    };
+
+    setHazards(prev => [newHazard, ...prev]);
+    showToast(`Hazard report ${newId} submitted. Visible in Property Management console.`, 'success');
+    return newHazard;
+  };
+
+  // -------------------------------------------------------------
+  // SECURITY ACTIONS (Screens S1 - S4)
+  // -------------------------------------------------------------
+
+  const acknowledgeAlert = (alertId) => {
+    setAlerts(prev => prev.map(a => 
+      a.id === alertId ? { ...a, status: 'Acknowledged' } : a
+    ));
+    showToast(`Alert ${alertId} acknowledged by Duty Security Lead.`, 'success');
+  };
+
+  const markResponseInProgress = (alertId) => {
+    setAlerts(prev => prev.map(a => 
+      a.id === alertId ? { ...a, status: 'Response in progress' } : a
+    ));
+    showToast(`Alert ${alertId} status marked: 'Response in progress'.`, 'info');
+  };
+
+  const addAlertNote = (alertId, noteText) => {
+    const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    setAlerts(prev => prev.map(a => {
+      if (a.id !== alertId) return a;
+      return {
+        ...a,
+        notes: [...a.notes, `${now} — Officer: ${noteText}`]
+      };
+    }));
+    showToast('Incident audit note appended.', 'success');
+  };
+
+  const resolveAlert = (alertId) => {
+    setAlerts(prev => prev.map(a => 
+      a.id === alertId ? { ...a, status: 'Resolved — demo' } : a
+    ));
+    setHeldBrightNode(null);
+    showToast(`Alert ${alertId} marked as 'Resolved — demo'.`, 'info');
+  };
+
+  // -------------------------------------------------------------
+  // PROPERTY MANAGEMENT ACTIONS (Screens M1 - M8)
+  // -------------------------------------------------------------
+
+  const updateHazardStatus = (hazardId, newStatus) => {
+    setHazards(prev => prev.map(h => 
+      h.id === hazardId ? { ...h, status: newStatus } : h
+    ));
+    showToast(`Hazard ${hazardId} updated to '${newStatus}'.`, 'success');
+  };
+
+  const applySelectedPlan = () => {
+    const ids = optimisedPlan.selectedIds;
+    setAppliedInterventions(ids);
+    setPlanApplied(true);
+
+    // Also update matching hazards to 'Verified' or 'In progress'
+    setHazards(prev => prev.map(h => {
+      if (ids.includes(h.pairedInterventionId)) {
+        return { ...h, status: 'In progress' };
+      }
+      return h;
+    }));
+
+    showToast(`Maintenance plan applied! Modelled route conditions updated for Route A & B.`, 'success');
+  };
+
+  const resetAppliedPlan = () => {
+    setAppliedInterventions([]);
+    setPlanApplied(false);
+    showToast('Applied plan reset to baseline.', 'info');
+  };
+
+  // -------------------------------------------------------------
+  // RESET DEMO SCENARIO (Section 4 & 5)
+  // -------------------------------------------------------------
+  const resetDemoScenario = () => {
+    setRole('select');
+    setResidentTab('home');
+    setSecurityTab('overview');
+    setPropertyTab('overview');
+    setSelectedRouteId('A');
+    setJourneyStatus('idle');
+    setCheckpointIndex(0);
+    setPassedCheckpoints(['L-01']);
+    setMissedCheckpointPrompt(false);
+    setActiveLamps(['L-01', 'L-02']);
+    setHeldBrightNode(null);
+    setDuressTriggered(false);
+    setAlerts([]);
+    setHazards(INITIAL_HAZARDS);
+    setCheckpointEvents(INITIAL_CHECKPOINT_EVENTS);
+    setBudget(5000);
+    setOptimisedPlan(solveKnapsackBudget(5000));
+    setAppliedInterventions([]);
+    setPlanApplied(false);
+    setStorylineStep(0);
+    
+    localStorage.removeItem('ns_role');
+    localStorage.removeItem('ns_alerts');
+    localStorage.removeItem('ns_hazards');
+    localStorage.removeItem('ns_checkpoints');
+
+    showToast('Demo scenario reset to initial clean state.', 'info');
+  };
+
+  return (
+    <NightSafeContext.Provider
+      value={{
+        // Role & Tab Navigation
+        role,
+        setRole,
+        residentTab,
+        setResidentTab,
+        securityTab,
+        setSecurityTab,
+        propertyTab,
+        setPropertyTab,
+        navigateRole,
+        selectedAlertId,
+        setSelectedAlertId,
+        selectedHazardId,
+        setSelectedHazardId,
+
+        // Data & Models
+        townshipInfo: TOWNSHIP_INFO,
+        residentProfile: RESIDENT_PROFILE,
+        routes: SCHEMATIC_ROUTES,
+        nodes: SCHEMATIC_NODES,
+        hazards,
+        alerts,
+        checkpointEvents,
+        candidateInterventions: CANDIDATE_INTERVENTIONS,
+
+        // Journey State
+        selectedRouteId,
+        setSelectedRouteId,
+        journeyStatus,
+        checkpointIndex,
+        passedCheckpoints,
+        missedCheckpointPrompt,
+        checkinsEnabled,
+        setCheckinsEnabled,
+        activeLamps,
+        heldBrightNode,
+        duressConfig,
+        setDuressConfig,
+        duressTriggered,
+
+        // Journey Actions
+        startJourney,
+        simulatePassCheckpoint,
+        simulateMissedCheckpoint,
+        resolveMissedPrompt,
+        endJourney,
+        triggerDuressPin,
+        triggerSos,
+        submitHazardReport,
+
+        // Security Actions
+        acknowledgeAlert,
+        markResponseInProgress,
+        addAlertNote,
+        resolveAlert,
+
+        // Property Actions
+        priorityWeights,
+        setPriorityWeights,
+        updateHazardStatus,
+        budget,
+        setBudget,
+        optimisedPlan,
+        appliedInterventions,
+        planApplied,
+        applySelectedPlan,
+        resetAppliedPlan,
+
+        // Global Reset & Toast
+        toast,
+        showToast,
+        resetDemoScenario,
+
+        // Storyline Helper
+        storylineStep,
+        setStorylineStep,
+        isStorylineDrawerOpen,
+        setIsStorylineDrawerOpen
+      }}
+    >
+      {children}
+    </NightSafeContext.Provider>
+  );
+}
+
+export function useNightSafe() {
+  const context = useContext(NightSafeContext);
+  if (!context) throw new Error('useNightSafe must be used within NightSafeProvider');
+  return context;
+}

@@ -15,7 +15,8 @@ export function SchematicTownshipMap({
   interactive = true,
   height = '420px',
   showLegend = true,
-  showOverlayLabels = true
+  showOverlayLabels = true,
+  showHeader = true
 }) {
   const isNight = theme === 'night';
 
@@ -29,6 +30,9 @@ export function SchematicTownshipMap({
   // Path data for Route B: L-01 (80, 280) -> L-05 (240, 380) -> L-06 (420, 380) -> L-07 (580, 350) -> L-08 (740, 240)
   const routeBPath = "M 80 280 C 140 340, 170 380, 240 380 L 420 380 C 500 380, 530 365, 580 350 L 740 240";
 
+  // Path data for Route C: L-01 (80, 280) -> Courtyard Link -> L-07 (580, 350) -> L-08 (740, 240)
+  const routeCPath = "M 80 280 C 180 260, 380 260, 580 350 L 740 240";
+
   // Active emergency alert check
   const hasEmergency = alerts.some(a => a.status !== 'Resolved — demo');
   const emergencyAlert = alerts.find(a => a.status !== 'Resolved — demo');
@@ -36,24 +40,26 @@ export function SchematicTownshipMap({
   return (
     <div className={`relative rounded-xl overflow-hidden border ${isNight ? 'bg-[#0D1726] border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'} transition-colors duration-300 shadow-sm flex flex-col`}>
       {/* Map Header Bar */}
-      <div className={`px-4 py-2.5 border-b flex items-center justify-between text-xs font-medium ${isNight ? 'bg-[#142B4A]/60 border-slate-800 text-slate-300' : 'bg-white border-slate-200 text-slate-600'}`}>
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span className="font-semibold tracking-wide uppercase">Schematic Township Layout</span>
-          <span className="text-[11px] px-2 py-0.5 rounded bg-slate-200/50 dark:bg-slate-800 text-slate-500">
-            {isNight ? 'Night Corridor Mode' : 'Technical Operations Grid'}
-          </span>
-        </div>
-        <div className="flex items-center gap-3">
-          {heldBrightNode && (
-            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-400 bg-amber-950/40 px-2 py-0.5 rounded border border-amber-600/40">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping"></span>
-              Lights Held Bright: {heldBrightNode}
+      {showHeader && (
+        <div className={`px-4 py-2.5 border-b flex items-center justify-between text-xs font-medium ${isNight ? 'bg-[#142B4A]/60 border-slate-800 text-slate-300' : 'bg-white border-slate-200 text-slate-600'}`}>
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span className="font-semibold tracking-wide uppercase">Schematic Township Layout</span>
+            <span className="text-[11px] px-2 py-0.5 rounded bg-slate-200/50 dark:bg-slate-800 text-slate-500">
+              {isNight ? 'Night Corridor Mode' : 'Technical Operations Grid'}
             </span>
-          )}
-          <span className="text-[11px] text-slate-400">Scale: Fictional Prototype</span>
+          </div>
+          <div className="flex items-center gap-3">
+            {heldBrightNode && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-400 bg-amber-950/40 px-2 py-0.5 rounded border border-amber-600/40">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping"></span>
+                Lights Held Bright: {heldBrightNode}
+              </span>
+            )}
+            <span className="text-[11px] text-slate-400">Scale: Fictional Prototype</span>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* SVG Canvas Area */}
       <div className="relative w-full overflow-hidden" style={{ height }}>
@@ -136,6 +142,14 @@ export function SchematicTownshipMap({
               strokeLinecap="round"
               strokeLinejoin="round"
             />
+            {/* Route C base road */}
+            <path
+              d={routeCPath}
+              stroke={isNight ? '#1e293b' : '#cbd5e1'}
+              strokeWidth="16"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
           </g>
 
           {/* Active Highlighted Route Lines */}
@@ -148,7 +162,7 @@ export function SchematicTownshipMap({
               strokeLinecap="round"
               strokeDasharray={selectedRoute === 'A' ? 'none' : '6 6'}
               className="transition-all duration-300"
-              opacity={selectedRoute === 'B' ? '0.3' : '1'}
+              opacity={selectedRoute && selectedRoute !== 'A' ? '0.3' : '1'}
             />
 
             {/* Route B Line */}
@@ -159,7 +173,18 @@ export function SchematicTownshipMap({
               strokeLinecap="round"
               strokeDasharray={selectedRoute === 'B' ? 'none' : '6 6'}
               className="transition-all duration-300"
-              opacity={selectedRoute === 'A' ? '0.3' : '1'}
+              opacity={selectedRoute && selectedRoute !== 'B' ? '0.3' : '1'}
+            />
+
+            {/* Route C Line */}
+            <path
+              d={routeCPath}
+              stroke={selectedRoute === 'C' ? '#F4B942' : (isNight ? '#334155' : '#94a3b8')}
+              strokeWidth={selectedRoute === 'C' ? '7' : '3'}
+              strokeLinecap="round"
+              strokeDasharray={selectedRoute === 'C' ? 'none' : '6 6'}
+              className="transition-all duration-300"
+              opacity={selectedRoute && selectedRoute !== 'C' ? '0.3' : '1'}
             />
           </g>
 
@@ -182,7 +207,17 @@ export function SchematicTownshipMap({
               fill={selectedRoute === 'B' ? '#F4B942' : (isNight ? '#64748b' : '#64748b')}
               className="transition-colors"
             >
-              Route B: Garden Shortcut (7 min · Model Cost 43)
+              Route B: Garden Shortcut (6 min · Model Cost 43)
+            </text>
+
+            {/* Route C Label */}
+            <text
+              x="260"
+              y="250"
+              fill={selectedRoute === 'C' ? '#F4B942' : (isNight ? '#64748b' : '#64748b')}
+              className="transition-colors"
+            >
+              Route C: Courtyard Link (8 min · Shortest 520m)
             </text>
           </g>
 

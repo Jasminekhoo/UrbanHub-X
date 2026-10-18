@@ -6,243 +6,238 @@ import {
   Building2, 
   ArrowRight, 
   KeyRound, 
-  Mail, 
-  Sparkles, 
-  Info, 
-  RotateCcw,
+  Mail,
   CheckCircle2
 } from 'lucide-react';
 
-export function NightSafeLoginView() {
-  const { navigateRole, resetDemoScenario, setIsStorylineDrawerOpen } = useNightSafe();
+const ROLES = [
+  {
+    id: 'resident',
+    title: 'Resident',
+    subtitle: 'Citizen App',
+    email: 'resident@urbanx.demo',
+    password: 'Resident2026!',
+    tab: 'home',
+    icon: Smartphone,
+  },
+  {
+    id: 'security',
+    title: 'Security',
+    subtitle: 'Guard Ops',
+    email: 'security@urbanx.demo',
+    password: 'GuardOps2026!',
+    tab: 'overview',
+    icon: Shield,
+  },
+  {
+    id: 'property',
+    title: 'Property',
+    subtitle: 'Township Admin',
+    email: 'property@urbanx.demo',
+    password: 'PropertyMgmt2026!',
+    tab: 'overview',
+    icon: Building2,
+  },
+];
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+export function NightSafeLoginView() {
+  const { navigateRole, showToast } = useNightSafe();
+
+  const [selectedRole, setSelectedRole] = useState('resident');
+  const [email, setEmail] = useState('resident@urbanx.demo');
+  const [password, setPassword] = useState('Resident2026!');
   const [error, setError] = useState('');
 
+  const handleSelectRole = (roleId) => {
+    setSelectedRole(roleId);
+    const target = ROLES.find(r => r.id === roleId);
+    if (target) {
+      setEmail(target.email);
+      setPassword(target.password);
+    }
+    setError('');
+  };
+
   const handleFormLogin = (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     setError('');
 
     const lower = email.trim().toLowerCase();
-    if (lower.includes('security') || lower.includes('guard')) {
+    if (lower.includes('security') || lower.includes('guard') || selectedRole === 'security') {
       navigateRole('security', 'overview');
-    } else if (lower.includes('property') || lower.includes('manager') || lower.includes('admin')) {
+    } else if (lower.includes('property') || lower.includes('manager') || lower.includes('admin') || selectedRole === 'property') {
       navigateRole('property', 'overview');
     } else {
-      // Default to Resident
       navigateRole('resident', 'home');
     }
   };
 
-  const fillAccount = (roleType) => {
-    setError('');
-    if (roleType === 'resident') {
-      setEmail('aina@nightsafe.demo');
-      setPassword('Resident2026!');
-    } else if (roleType === 'security') {
-      setEmail('security@nightsafe.demo');
-      setPassword('GuardOps2026!');
-    } else if (roleType === 'property') {
-      setEmail('property@nightsafe.demo');
-      setPassword('PropertyMgmt2026!');
+  const handleForgotPassword = () => {
+    if (showToast) {
+      showToast('Password reset link sent to your email address.', 'info');
+    }
+  };
+
+  const handleSignUp = () => {
+    if (showToast) {
+      showToast('Demo Mode: Self-registration is simulated. Please select a role above to sign in.', 'info');
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#0D1726] text-white flex flex-col justify-between p-4 sm:p-6 relative overflow-hidden font-sans">
+    <div className="min-h-screen bg-[#0A0F1D] text-white flex flex-col justify-center items-center p-4 sm:p-6 relative overflow-hidden font-sans">
       {/* Background ambient lighting */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[350px] bg-[#2864A6]/20 rounded-full blur-[100px] pointer-events-none"></div>
-      <div className="absolute -bottom-16 right-4 w-[300px] h-[300px] bg-[#F4B942]/10 rounded-full blur-[80px] pointer-events-none"></div>
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[550px] h-[350px] bg-[#2864A6]/20 rounded-full blur-[110px] pointer-events-none"></div>
+      <div className="absolute -bottom-16 right-8 w-[280px] h-[280px] bg-sky-500/10 rounded-full blur-[90px] pointer-events-none"></div>
 
-      {/* Top Header Bar */}
-      <header className="max-w-md w-full mx-auto flex items-center justify-between text-xs py-2 border-b border-slate-800/80 relative z-10">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span className="text-slate-300 font-mono text-[11px]">SDP Hackathon 2026 · Track: People</span>
-        </div>
-        <button
-          onClick={() => setIsStorylineDrawerOpen(true)}
-          className="text-amber-400 hover:text-amber-300 flex items-center gap-1 font-semibold text-[11px]"
-        >
-          <Sparkles className="w-3.5 h-3.5" />
-          <span>Pitch Guide</span>
-        </button>
-      </header>
-
-      {/* Main Login Chassis (Mobile-First Card) */}
-      <main className="max-w-md w-full mx-auto my-auto py-6 relative z-10 space-y-6">
-        {/* Brand & Wordmark */}
-        <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#2864A6] border border-sky-400/40 shadow-xl mb-1">
-            <span className="text-[#F4B942] font-black text-2xl tracking-tighter">NL</span>
-          </div>
-          <h1 className="text-2xl font-black tracking-tight text-white">NightSafe Loop</h1>
-          <p className="text-xs text-amber-300/90 font-medium">
-            Better-lit journeys. Faster help. Smarter community improvements.
-          </p>
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-800/90 border border-slate-700 text-slate-400 text-[10px] font-mono">
-            <Info className="w-3 h-3 text-amber-400" />
-            <span>Prototype Demo · Role-Based Mobile Access</span>
-          </div>
-        </div>
-
-        {/* 1-Click Fast Role Login Portals (Recommended for Pitch Demo) */}
-        <div className="bg-[#142B4A]/80 backdrop-blur-md rounded-2xl border border-slate-700 p-4 space-y-3 shadow-xl">
-          <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider text-center">
-            One-Click Demo Portals
-          </div>
-
-          {/* Resident Button (Primary) */}
-          <button
-            onClick={() => navigateRole('resident', 'home')}
-            className="w-full p-3.5 rounded-xl bg-gradient-to-r from-[#2864A6] to-[#1E3C66] hover:from-[#1E3C66] hover:to-[#2864A6] text-white font-bold text-xs shadow-md border border-sky-400/30 flex items-center justify-between group transition-all"
-          >
-            <div className="flex items-center gap-3 text-left">
-              <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center text-[#F4B942]">
-                <Smartphone className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="font-extrabold text-sm text-white flex items-center gap-1.5">
-                  <span>Resident Mobile App</span>
-                  <span className="text-[9px] bg-emerald-500 text-slate-950 font-black px-1.5 py-0.2 rounded-full uppercase">
-                    Main App
-                  </span>
-                </div>
-                <div className="text-[11px] text-sky-200/80 font-normal">
-                  Aina · Night routes, light corridor & duress PIN
-                </div>
+      {/* Main Login Chassis */}
+      <main className="max-w-md w-full mx-auto relative z-10">
+        <div className="bg-[#0D1726]/90 backdrop-blur-xl border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
+          
+          {/* Logo & Name as Urban-X */}
+          <div className="text-center space-y-3">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#1E3C66] via-[#2864A6] to-sky-400 p-[2px] shadow-xl shadow-sky-500/20">
+              <div className="w-full h-full bg-[#0D1726] rounded-[14px] flex items-center justify-center">
+                <svg
+                  className="w-8 h-8 text-sky-400"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M4 4l16 16" />
+                  <path d="M20 4L4 20" />
+                  <circle cx="12" cy="12" r="2.5" className="fill-sky-400 stroke-none" />
+                </svg>
               </div>
             </div>
-            <ArrowRight className="w-4 h-4 text-sky-300 group-hover:translate-x-1 transition-transform" />
-          </button>
+            <h1 className="text-3xl font-black tracking-tight text-white">
+              Urban<span className="text-sky-400">-X</span>
+            </h1>
+          </div>
 
-          {/* Security & Property Secondary Demo Buttons */}
-          <div className="grid grid-cols-2 gap-2 pt-1">
+          {/* Role Selection Card Section */}
+          <div className="space-y-2">
+            <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+              Select Role
+            </label>
+            <div className="grid grid-cols-3 gap-2.5">
+              {ROLES.map((r) => {
+                const isSelected = selectedRole === r.id;
+                const Icon = r.icon;
+                return (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => handleSelectRole(r.id)}
+                    className={`relative p-3 rounded-2xl border text-center transition-all flex flex-col items-center justify-center gap-1.5 focus:outline-none cursor-pointer ${
+                      isSelected
+                        ? 'bg-[#1E3C66]/80 border-sky-400 ring-2 ring-sky-400/40 text-white shadow-lg shadow-sky-900/40'
+                        : 'bg-slate-900/60 border-slate-800 hover:bg-slate-800/80 hover:border-slate-700 text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    {isSelected && (
+                      <div className="absolute top-1.5 right-1.5 text-sky-400">
+                        <CheckCircle2 className="w-3.5 h-3.5 fill-sky-400 text-[#0D1726]" />
+                      </div>
+                    )}
+                    <div
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${
+                        isSelected
+                          ? 'bg-sky-400/20 text-sky-300'
+                          : 'bg-slate-800/80 text-slate-400'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-xs leading-tight">{r.title}</div>
+                      <div className="text-[10px] text-slate-400 leading-tight mt-0.5">{r.subtitle}</div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Login Form */}
+          <form onSubmit={handleFormLogin} className="space-y-4">
+            {error && (
+              <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs">
+                {error}
+              </div>
+            )}
+
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-300 mb-1.5">
+                Email
+              </label>
+              <div className="relative">
+                <Mail className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="name@urbanx.demo"
+                  required
+                  className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700/80 text-white placeholder-slate-500 text-xs focus:outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400 transition"
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-[11px] font-semibold text-slate-300">
+                  Password
+                </label>
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  className="text-[11px] text-sky-400 hover:text-sky-300 hover:underline transition-colors cursor-pointer"
+                >
+                  Forgot password?
+                </button>
+              </div>
+              <div className="relative">
+                <KeyRound className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••••••"
+                  required
+                  className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700/80 text-white placeholder-slate-500 text-xs focus:outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400 transition"
+                />
+              </div>
+            </div>
+
             <button
-              onClick={() => navigateRole('security', 'overview')}
-              className="p-3 rounded-xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700 hover:border-red-400/50 text-left transition space-y-1 group"
+              type="submit"
+              className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-[#2864A6] to-sky-500 hover:from-sky-600 hover:to-[#2864A6] text-white font-bold text-xs shadow-lg shadow-sky-900/30 transition-all flex items-center justify-center gap-2 group cursor-pointer"
             >
-              <div className="flex items-center justify-between">
-                <Shield className="w-4 h-4 text-[#C83E4D]" />
-                <span className="text-[10px] text-slate-400 font-mono">Demo S1–S4</span>
-              </div>
-              <div className="font-bold text-xs text-white group-hover:text-red-300">
-                Security Ops
-              </div>
-              <div className="text-[10px] text-slate-400 leading-tight">
-                Alert AL-204 & patrol audit
-              </div>
+              <span>Sign In</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
             </button>
+          </form>
 
-            <button
-              onClick={() => navigateRole('property', 'overview')}
-              className="p-3 rounded-xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700 hover:border-emerald-400/50 text-left transition space-y-1 group"
-            >
-              <div className="flex items-center justify-between">
-                <Building2 className="w-4 h-4 text-[#1F9D8B]" />
-                <span className="text-[10px] text-slate-400 font-mono">Demo M1–M8</span>
-              </div>
-              <div className="font-bold text-xs text-white group-hover:text-teal-300">
-                Property Intel
-              </div>
-              <div className="text-[10px] text-slate-400 leading-tight">
-                RM 5K budget optimizer
-              </div>
-            </button>
+          {/* Fake Sign Up Button */}
+          <div className="text-center pt-1 border-t border-slate-800/80">
+            <p className="text-xs text-slate-400">
+              Don't have an account?{' '}
+              <button
+                type="button"
+                onClick={handleSignUp}
+                className="text-sky-400 hover:text-sky-300 font-semibold hover:underline transition-colors ml-1 cursor-pointer"
+              >
+                Sign up
+              </button>
+            </p>
           </div>
+
         </div>
-
-        {/* Divider */}
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-slate-800"></div>
-          </div>
-          <div className="relative flex justify-center text-[10px] uppercase">
-            <span className="bg-[#0D1726] px-3 text-slate-500 font-bold tracking-wider">
-              Or Sign In with Demo Account
-            </span>
-          </div>
-        </div>
-
-        {/* Form Login */}
-        <form onSubmit={handleFormLogin} className="bg-white/5 border border-slate-800 p-4 rounded-2xl space-y-3 text-xs">
-          <div>
-            <label className="block text-[11px] font-semibold text-slate-400 mb-1">Email</label>
-            <div className="relative">
-              <Mail className="w-4 h-4 absolute left-3 top-2.5 text-slate-500" />
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="aina@nightsafe.demo"
-                className="w-full pl-9 pr-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white placeholder-slate-500 text-xs focus:outline-none focus:ring-1 focus:ring-sky-400"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-semibold text-slate-400 mb-1">Password</label>
-            <div className="relative">
-              <KeyRound className="w-4 h-4 absolute left-3 top-2.5 text-slate-500" />
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••••••"
-                className="w-full pl-9 pr-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white placeholder-slate-500 text-xs focus:outline-none focus:ring-1 focus:ring-sky-400"
-              />
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            className="w-full py-2.5 px-4 rounded-xl bg-[#2864A6] hover:bg-[#1E3C66] text-white font-bold text-xs shadow transition"
-          >
-            Sign In to NightSafe Loop
-          </button>
-
-          {/* Quick fill chips */}
-          <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1">
-            <span>Quick Autofill:</span>
-            <div className="flex gap-1.5">
-              <button
-                type="button"
-                onClick={() => fillAccount('resident')}
-                className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-sky-300"
-              >
-                Resident
-              </button>
-              <button
-                type="button"
-                onClick={() => fillAccount('security')}
-                className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-red-300"
-              >
-                Security
-              </button>
-              <button
-                type="button"
-                onClick={() => fillAccount('property')}
-                className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-teal-300"
-              >
-                Property
-              </button>
-            </div>
-          </div>
-        </form>
       </main>
-
-      {/* Footer */}
-      <footer className="max-w-md w-full mx-auto py-3 text-center text-[10px] text-slate-500 border-t border-slate-800/80 flex items-center justify-between">
-        <span>NightSafe Loop · Sime Darby Property 2026</span>
-        <button
-          onClick={resetDemoScenario}
-          className="text-slate-400 hover:text-white flex items-center gap-1"
-        >
-          <RotateCcw className="w-3 h-3" />
-          <span>Reset Demo</span>
-        </button>
-      </footer>
     </div>
   );
 }

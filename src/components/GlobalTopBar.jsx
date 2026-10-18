@@ -7,8 +7,7 @@ import {
   RotateCcw, 
   HelpCircle, 
   PlayCircle,
-  AlertOctagon,
-  Sparkles
+  AlertOctagon
 } from 'lucide-react';
 
 export function GlobalTopBar() {
@@ -17,9 +16,7 @@ export function GlobalTopBar() {
     navigateRole, 
     resetDemoScenario, 
     alerts, 
-    heldBrightNode,
-    setIsStorylineDrawerOpen,
-    storylineStep
+    heldBrightNode
   } = useNightSafe();
 
   const activeAlertCount = alerts.filter(a => a.status !== 'Resolved — demo').length;
@@ -91,15 +88,6 @@ export function GlobalTopBar() {
 
         {/* Right Tools: Storyline presenter helper & Demo Reset */}
         <div className="flex items-center gap-2">
-          {/* Storyline script helper toggle */}
-          <button
-            onClick={() => setIsStorylineDrawerOpen(true)}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-400/30 text-xs font-medium transition"
-            title="Open 3-5 Minute Pitch Guide"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <span className="hidden md:inline">Demo Script (Scene {storylineStep})</span>
-          </button>
 
           {/* Reset Demo button */}
           <button

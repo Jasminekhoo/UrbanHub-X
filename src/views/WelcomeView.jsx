@@ -8,13 +8,12 @@ import {
   Lock, 
   TrendingUp, 
   RotateCcw,
-  Sparkles,
   ArrowRight,
   Info
 } from 'lucide-react';
 
 export function WelcomeView() {
-  const { navigateRole, resetDemoScenario, setIsStorylineDrawerOpen } = useNightSafe();
+  const { navigateRole, resetDemoScenario } = useNightSafe();
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-[#0D1726] text-white flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
@@ -176,13 +175,6 @@ export function WelcomeView() {
             </button>
           </div>
 
-          <button
-            onClick={() => setIsStorylineDrawerOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-400/30 font-semibold hover:bg-amber-500/30 transition"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <span>Open 3–5 Minute Hackathon Pitch Script</span>
-          </button>
         </div>
       </div>
     </div>

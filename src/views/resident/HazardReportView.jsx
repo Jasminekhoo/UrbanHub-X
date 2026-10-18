@@ -10,7 +10,12 @@ import {
   Filter, 
   Plus,
   Info,
-  ChevronRight
+  ChevronRight,
+  Phone,
+  Edit3,
+  Layers,
+  History,
+  ChevronDown
 } from 'lucide-react';
 
 export function HazardReportView() {
@@ -22,35 +27,55 @@ export function HazardReportView() {
     showToast 
   } = useNightSafe();
 
+  const titlePresets = [
+    "Broken street lamp cover",
+    "Severely cracked pedestrian pathway",
+    "Overgrown vegetation blocking sightline",
+    "Dark pathway / unlit area",
+    "Uneven pavers / trip hazard"
+  ];
+
+  const defaultLocations = [
+    { label: "Junction L-04 (Central Boulevard)", node: "L-04", category: "Lighting deficiency / faulty streetlight" },
+    { label: "Garden Shortcut Path (Lamp L-06)", node: "L-06", category: "Obstructed sightline" },
+    { label: "Garden Shortcut midpoint", node: "L-06", category: "Damaged / discontinuous pedestrian path" },
+    { label: "North Avenue Pedestrian Walkway (Lamp L-03)", node: "L-03", category: "Lighting deficiency / faulty streetlight" },
+    { label: "Central Transit Stop Approach (Lamp L-08)", node: "L-08", category: "Lighting deficiency / faulty streetlight" },
+    { label: "Community Residence Entrance (Lamp L-01)", node: "L-01", category: "Other environmental concern" }
+  ];
+
+  const [title, setTitle] = useState("Broken street lamp cover");
   const [category, setCategory] = useState("Lighting deficiency / faulty streetlight");
+  const [isCustomLocation, setIsCustomLocation] = useState(false);
   const [location, setLocation] = useState("Junction L-04 (Central Boulevard)");
+  const [customLocationText, setCustomLocationText] = useState("");
   const [affectedNode, setAffectedNode] = useState("L-04");
   const [severity, setSeverity] = useState("High");
   const [description, setDescription] = useState("Lamp is not providing consistent illumination along pedestrian walkway.");
+  const [contactInfo, setContactInfo] = useState("");
   const [photoAttached, setPhotoAttached] = useState(false);
   const [submittedReport, setSubmittedReport] = useState(null);
 
-  const locations = [
-    { label: "Junction L-04 (Central Boulevard)", node: "L-04" },
-    { label: "Garden Shortcut Path (Lamp L-06)", node: "L-06" },
-    { label: "Central Transit Stop Approach (Lamp L-08)", node: "L-08" },
-    { label: "North Avenue Pedestrian Walkway (Lamp L-03)", node: "L-03" },
-    { label: "Community Residence Entrance (Lamp L-01)", node: "L-01" }
-  ];
-
   const handleSubmit = (e) => {
     e.preventDefault();
+    const finalLocation = isCustomLocation ? customLocationText.trim() : location;
+    if (!finalLocation) {
+      showToast('Please specify a location.', 'error');
+      return;
+    }
     if (!description.trim()) {
       showToast('Please provide a brief description of the issue.', 'error');
       return;
     }
 
     const created = submitHazardReport({
+      title: title.trim() || `${category.split('/')[0].trim()} at ${finalLocation}`,
       category,
-      location,
-      affectedNode,
+      location: finalLocation,
+      affectedNode: isCustomLocation ? 'L-04' : affectedNode,
       severity,
-      description
+      description,
+      contactInfo: contactInfo.trim()
     });
 
     setSubmittedReport(created);
@@ -156,6 +181,11 @@ export function HazardReportView() {
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5">
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                          h.severity === 'High' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
+                        }`}>
+                          {h.severity}
+                        </span>
                         <span className="font-bold text-xs text-slate-900">{h.id}: {h.title}</span>
                       </div>
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
@@ -233,103 +263,170 @@ export function HazardReportView() {
   }
 
   // -------------------------------------------------------------
-  // SCREEN R9: HAZARD REPORT FORM
+  // SCREEN R9: HAZARD REPORT FORM (Card Only)
   // -------------------------------------------------------------
   return (
-    <div className="space-y-4 pb-20">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-base font-bold text-slate-900">Report an Environmental Hazard</h2>
-          <p className="text-xs text-slate-500">Report lighting, pathway, or sightline defects</p>
-        </div>
-        <button
-          onClick={() => setResidentTab('my-reports')}
-          className="text-xs font-semibold text-[#2864A6] hover:underline"
-        >
-          My Reports ({hazards.length})
-        </button>
-      </div>
-
+    <div className="pb-20 pt-1">
       {submittedReport ? (
-        <div className="p-5 rounded-xl bg-emerald-50 border border-emerald-300 text-center space-y-3 shadow-sm animate-fadeIn">
+        <div className="p-5 rounded-2xl bg-emerald-50 border border-emerald-300 text-center space-y-3 shadow-sm animate-fadeIn">
           <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto">
             <CheckCircle2 className="w-6 h-6" />
           </div>
           <h3 className="font-bold text-sm text-emerald-950">Report Submitted Successfully</h3>
           <div className="text-xs text-emerald-900 space-y-1">
+            <p>Title: <strong>{submittedReport.title}</strong></p>
+            <p>Location: <strong>{submittedReport.location}</strong></p>
+            {submittedReport.contactInfo && (
+              <p>Contact: <strong>{submittedReport.contactInfo}</strong></p>
+            )}
             <p>Report ID: <strong className="font-mono">{submittedReport.id}</strong></p>
-            <p>Status: <strong>Reported — Awaiting Property Verification</strong></p>
-            <p className="text-[11px] text-emerald-800">
-              This report is now visible in the Property Management Intelligence console queue.
+            <p className="text-[11px] text-emerald-800 pt-1">
+              This report is recorded and visible to the community and management.
             </p>
           </div>
 
           <div className="pt-2 flex gap-2">
             <button
               onClick={() => setSubmittedReport(null)}
-              className="flex-1 py-2 px-3 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold"
+              className="flex-1 py-2 px-3 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold transition cursor-pointer"
             >
               Submit Another Report
             </button>
             <button
-              onClick={() => setResidentTab('my-reports')}
-              className="py-2 px-3 rounded-lg bg-white border border-emerald-300 text-emerald-900 text-xs font-semibold"
+              onClick={() => setResidentTab('home')}
+              className="py-2 px-3 rounded-lg bg-white border border-emerald-300 text-emerald-900 text-xs font-semibold hover:bg-emerald-100 transition cursor-pointer"
             >
-              View Feed
+              Back to Feed
             </button>
           </div>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="p-4 rounded-xl bg-white border border-slate-200 shadow-sm space-y-3">
-          {/* Category */}
-          <div className="space-y-1">
-            <label className="text-[11px] font-semibold text-slate-500 uppercase">Hazard Category</label>
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-800 font-medium focus:outline-none"
-            >
-              <option value="Lighting deficiency / faulty streetlight">Lighting deficiency / faulty streetlight</option>
-              <option value="Obstructed sightline">Obstructed sightline (vegetation/structures)</option>
-              <option value="Damaged / discontinuous pedestrian path">Damaged / discontinuous pedestrian path</option>
-              <option value="Other environmental concern">Other environmental concern</option>
-            </select>
+        <form onSubmit={handleSubmit} className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-3.5">
+          {/* Title (Selectable presets + Editable input) */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                <Edit3 className="w-3.5 h-3.5 text-sky-600" />
+                <span>Issue Title</span>
+              </label>
+              <span className="text-[10px] text-slate-400">Select preset or edit</span>
+            </div>
+
+            {/* Title Presets Chips */}
+            <div className="flex flex-wrap gap-1 pb-1">
+              {titlePresets.map(preset => (
+                <button
+                  type="button"
+                  key={preset}
+                  onClick={() => {
+                    setTitle(preset);
+                    if (preset.toLowerCase().includes('lamp') || preset.toLowerCase().includes('light')) {
+                      setCategory("Lighting deficiency / faulty streetlight");
+                    } else if (preset.toLowerCase().includes('vegetation') || preset.toLowerCase().includes('sightline')) {
+                      setCategory("Obstructed sightline");
+                    } else if (preset.toLowerCase().includes('pathway') || preset.toLowerCase().includes('pavers')) {
+                      setCategory("Damaged / discontinuous pedestrian path");
+                    }
+                  }}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition cursor-pointer ${
+                    title === preset
+                      ? 'bg-[#2864A6] text-white shadow-2xs'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  {preset}
+                </button>
+              ))}
+            </div>
+
+            {/* Editable Title Input */}
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. Broken street lamp cover at walkway"
+              className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-[#2864A6]/20 focus:border-[#2864A6] transition"
+            />
           </div>
 
-          {/* Location Node */}
-          <div className="space-y-1">
-            <label className="text-[11px] font-semibold text-slate-500 uppercase">Location / Schematic Node</label>
-            <select
-              value={location}
-              onChange={(e) => {
-                setLocation(e.target.value);
-                const match = locations.find(l => l.label === e.target.value);
-                if (match) setAffectedNode(match.node);
-              }}
-              className="w-full px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-800 font-medium focus:outline-none"
-            >
-              {locations.map(loc => (
-                <option key={loc.label} value={loc.label}>{loc.label}</option>
-              ))}
-            </select>
+          {/* Location (Default categories/presets or Customize) */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                <MapPin className="w-3.5 h-3.5 text-sky-600" />
+                <span>Location</span>
+              </label>
+
+              {/* Mode Toggle: Default vs Custom */}
+              <div className="flex items-center p-0.5 rounded-lg bg-slate-100 text-[10px] font-semibold">
+                <button
+                  type="button"
+                  onClick={() => setIsCustomLocation(false)}
+                  className={`px-2 py-0.5 rounded-md transition cursor-pointer ${
+                    !isCustomLocation ? 'bg-white text-[#2864A6] shadow-2xs' : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  Default
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsCustomLocation(true)}
+                  className={`px-2 py-0.5 rounded-md transition cursor-pointer ${
+                    isCustomLocation ? 'bg-white text-[#2864A6] shadow-2xs' : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  Custom
+                </button>
+              </div>
+            </div>
+
+            {!isCustomLocation ? (
+              <select
+                value={location}
+                onChange={(e) => {
+                  setLocation(e.target.value);
+                  const match = defaultLocations.find(l => l.label === e.target.value);
+                  if (match) {
+                    setAffectedNode(match.node);
+                    if (match.category) setCategory(match.category);
+                  }
+                }}
+                className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-[#2864A6]/20 focus:border-[#2864A6] transition cursor-pointer"
+              >
+                {defaultLocations.map(loc => (
+                  <option key={loc.label} value={loc.label}>{loc.label}</option>
+                ))}
+              </select>
+            ) : (
+              <input
+                type="text"
+                value={customLocationText}
+                onChange={(e) => setCustomLocationText(e.target.value)}
+                placeholder="Enter custom location (e.g. Near Block C lift lobby walkway)"
+                className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-[#2864A6]/20 focus:border-[#2864A6] transition"
+              />
+            )}
           </div>
 
           {/* Severity */}
-          <div className="space-y-1">
-            <label className="text-[11px] font-semibold text-slate-500 uppercase">Perceived Severity</label>
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+              <span>Perceived Severity</span>
+            </label>
             <div className="grid grid-cols-3 gap-2">
               {['Low', 'Medium', 'High'].map((s) => (
                 <button
                   type="button"
                   key={s}
                   onClick={() => setSeverity(s)}
-                  className={`py-1.5 rounded-lg text-xs font-semibold border transition ${
+                  className={`py-1.5 rounded-xl text-xs font-semibold border transition cursor-pointer ${
                     severity === s
                       ? s === 'High'
-                        ? 'bg-red-50 border-red-500 text-red-700'
+                        ? 'bg-rose-50 border-rose-500 text-rose-700 shadow-2xs'
                         : s === 'Medium'
-                        ? 'bg-amber-50 border-amber-500 text-amber-700'
-                        : 'bg-emerald-50 border-emerald-500 text-emerald-700'
+                        ? 'bg-amber-50 border-amber-500 text-amber-700 shadow-2xs'
+                        : 'bg-emerald-50 border-emerald-500 text-emerald-700 shadow-2xs'
                       : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
                   }`}
                 >
@@ -340,14 +437,32 @@ export function HazardReportView() {
           </div>
 
           {/* Description */}
-          <div className="space-y-1">
-            <label className="text-[11px] font-semibold text-slate-500 uppercase">Description</label>
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">Description</label>
             <textarea
               rows={3}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#2864A6]"
+              className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2864A6]/20 focus:border-[#2864A6] transition"
               placeholder="Describe condition, lighting deficit, or pavement irregularity..."
+            />
+          </div>
+
+          {/* Contact Info (Optional) */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                <Phone className="w-3.5 h-3.5 text-sky-600" />
+                <span>Contact Info (Optional)</span>
+              </label>
+              <span className="text-[10px] text-slate-400">Optional</span>
+            </div>
+            <input
+              type="text"
+              value={contactInfo}
+              onChange={(e) => setContactInfo(e.target.value)}
+              placeholder="e.g. +60 12-389 4521 or Unit 12-08"
+              className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2864A6]/20 focus:border-[#2864A6] transition"
             />
           </div>
 
@@ -355,27 +470,77 @@ export function HazardReportView() {
           <div 
             onClick={() => {
               setPhotoAttached(!photoAttached);
-              showToast(photoAttached ? 'Demo photo removed' : 'Simulated demo photo attached (inspection audit tag)', 'info');
+              showToast(photoAttached ? 'Demo photo removed' : 'Simulated photo attached', 'info');
             }}
-            className="p-3 rounded-lg border border-dashed border-slate-300 hover:border-slate-400 bg-slate-50 cursor-pointer text-center text-xs text-slate-600 flex items-center justify-center gap-2 transition"
+            className="p-3 rounded-xl border border-dashed border-slate-300 hover:border-slate-400 bg-slate-50 cursor-pointer text-center text-xs text-slate-600 flex items-center justify-center gap-2 transition"
           >
             <Camera className="w-4 h-4 text-slate-400" />
-            <span>{photoAttached ? '✓ Photo Attached: img_junction_l04.jpg' : 'Attach Demo Photo (Optional)'}</span>
+            <span>{photoAttached ? '✓ Photo Attached: inspection_site.jpg' : 'Attach Photo (Optional)'}</span>
           </div>
 
           {/* Submit */}
           <button
             type="submit"
-            className="w-full py-2.5 px-4 rounded-xl bg-[#2864A6] hover:bg-[#1E3C66] text-white text-xs font-semibold shadow transition"
+            className="w-full py-2.5 px-4 rounded-xl bg-[#2864A6] hover:bg-[#1E3C66] text-white text-xs font-bold shadow-sm transition cursor-pointer"
           >
             Submit Hazard Report
           </button>
-
-          <div className="p-2.5 rounded-lg bg-slate-100 text-[10px] text-slate-500 leading-snug">
-            Privacy notice: Reports do not collect your identity, phone number, or home address. Demo data is simulated.
-          </div>
         </form>
       )}
+
+      {/* Past Records Section (1-2 recent records) */}
+      <div className="mt-4 p-4 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <History className="w-4 h-4 text-[#2864A6]" />
+            <span className="text-xs font-bold text-slate-800">Recent Past Reports</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-100 text-slate-600 font-semibold">
+              {hazards.slice(0, 2).length}
+            </span>
+          </div>
+          <button
+            onClick={() => setResidentTab('home')}
+            className="text-[11px] font-semibold text-[#2864A6] hover:underline cursor-pointer"
+          >
+            View in Feed →
+          </button>
+        </div>
+
+        <div className="space-y-2">
+          {hazards.slice(0, 2).map((item) => (
+            <div
+              key={item.id}
+              className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1.5"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-bold text-slate-900 truncate">
+                  {item.title}
+                </span>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                  item.status === 'Verified' || item.status === 'Resolved'
+                    ? 'bg-emerald-100 text-emerald-800'
+                    : item.status === 'In progress'
+                    ? 'bg-sky-100 text-[#2864A6]'
+                    : 'bg-amber-100 text-amber-800'
+                }`}>
+                  {item.status || 'Reported'}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between text-[11px] text-slate-500 pt-0.5">
+                <div className="flex items-center gap-1 truncate max-w-[190px]">
+                  <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                  <span className="truncate">{item.location}</span>
+                </div>
+                <div className="flex items-center gap-1 text-[10px] text-slate-400 shrink-0">
+                  <Clock className="w-3 h-3" />
+                  <span>{item.reportDate || '18 Oct 2026'}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

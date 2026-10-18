@@ -19,8 +19,7 @@ import {
   History, 
   RotateCcw,
   Info,
-  Smartphone,
-  Sparkles
+  Smartphone
 } from 'lucide-react';
 
 export function SecurityDashboard() {
@@ -40,8 +39,7 @@ export function SecurityDashboard() {
     heldBrightNode,
     showToast,
     navigateRole,
-    resetDemoScenario,
-    setIsStorylineDrawerOpen
+    resetDemoScenario
   } = useNightSafe();
 
   const [filterStatus, setFilterStatus] = useState('all');
@@ -85,13 +83,6 @@ export function SecurityDashboard() {
             <span>← Return to Resident App</span>
           </button>
 
-          <button
-            onClick={() => setIsStorylineDrawerOpen(true)}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-400/30 font-semibold text-xs hover:bg-amber-500/30 transition"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <span className="hidden sm:inline">Pitch Guide</span>
-          </button>
 
           <button
             onClick={() => navigateRole('login')}

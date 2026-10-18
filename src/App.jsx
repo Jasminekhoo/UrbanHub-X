@@ -4,7 +4,6 @@ import { NightSafeLoginView } from './views/NightSafeLoginView';
 import { ResidentContainer } from './views/resident/ResidentContainer';
 import { SecurityDashboard } from './views/security/SecurityDashboard';
 import { PropertyDashboard } from './views/property/PropertyDashboard';
-import { StorylineDrawer } from './components/StorylineDrawer';
 import { Toast } from './components/Toast';
 
 export function App() {
@@ -20,8 +19,6 @@ export function App() {
         {role === 'property' && <PropertyDashboard />}
       </div>
 
-      {/* 3-5 Minute Pitch Script & Storyline Presenter Companion */}
-      <StorylineDrawer />
 
       {/* Real-time Notification Toast */}
       <Toast />

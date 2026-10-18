@@ -40,6 +40,7 @@ export function NightSafeProvider({ children }) {
 
   // Resident Journey state
   const [selectedRouteId, setSelectedRouteId] = useState('A');
+  const [routeCategory, setRouteCategory] = useState('safest'); // 'safest' | 'fastest' | 'shortest'
   const [journeyStatus, setJourneyStatus] = useState('idle'); // 'idle' | 'in_progress' | 'ended'
   const [checkpointIndex, setCheckpointIndex] = useState(0);
   const [passedCheckpoints, setPassedCheckpoints] = useState(['L-01']);
@@ -50,10 +51,27 @@ export function NightSafeProvider({ children }) {
   const [activeLamps, setActiveLamps] = useState(['L-01', 'L-02']);
   const [heldBrightNode, setHeldBrightNode] = useState(null); // 'L-07' during duress alert
 
-  // Duress PIN configuration
-  const [duressConfig, setDuressConfig] = useState({
-    enabled: true,
-    pin: '9142'
+  // Fall detection simulation state
+  const [fallDetectionActive, setFallDetectionActive] = useState(false);
+
+  // PIN configuration (Normal cancel PIN + Duress fake cancel PIN)
+  const [duressConfig, setDuressConfig] = useState(() => {
+    const saved = localStorage.getItem('ns_pin_config');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return {
+          enabled: parsed.enabled ?? true,
+          pin: parsed.pin || '9142',
+          normalPin: parsed.normalPin || '1234'
+        };
+      } catch (e) {}
+    }
+    return {
+      enabled: true,
+      pin: '9142',
+      normalPin: '1234'
+    };
   });
   const [duressTriggered, setDuressTriggered] = useState(false);
 
@@ -63,10 +81,29 @@ export function NightSafeProvider({ children }) {
     return saved ? JSON.parse(saved) : [];
   });
 
-  // Hazards list
+  // Hazards list — guaranteed reliable images and exact 3 feeds
   const [hazards, setHazards] = useState(() => {
     const saved = localStorage.getItem('ns_hazards');
-    return saved ? JSON.parse(saved) : INITIAL_HAZARDS;
+    if (!saved) return INITIAL_HAZARDS;
+    try {
+      const parsed = JSON.parse(saved);
+      // Map seed hazards so figureUrl, severity, feedCategory always reflect latest data
+      return INITIAL_HAZARDS.map(initH => {
+        const existing = parsed.find(p => p.id === initH.id);
+        return existing
+          ? {
+              ...initH,
+              ...existing,
+              figureUrl: initH.figureUrl,
+              feedCategory: initH.feedCategory,
+              reportedBy: initH.reportedBy,
+              severity: existing.severity || initH.severity
+            }
+          : initH;
+      });
+    } catch {
+      return INITIAL_HAZARDS;
+    }
   });
 
   // Checkpoint events
@@ -104,6 +141,10 @@ export function NightSafeProvider({ children }) {
   useEffect(() => {
     localStorage.setItem('ns_checkpoints', JSON.stringify(checkpointEvents));
   }, [checkpointEvents]);
+
+  useEffect(() => {
+    localStorage.setItem('ns_pin_config', JSON.stringify(duressConfig));
+  }, [duressConfig]);
 
   // Toast timer
   useEffect(() => {
@@ -251,7 +292,7 @@ export function NightSafeProvider({ children }) {
     showToast('Request received. (UI remains neutral for user safety)', 'info');
   };
 
-  // Trigger Overt SOS (Screen R7)
+  // Trigger Overt SOS (Screen R7) — returns the new alert ID
   const triggerSos = (category = 'Personal Safety') => {
     const newId = `AL-${Date.now().toString().slice(-3)}`;
     const newAlert = {
@@ -276,18 +317,61 @@ export function NightSafeProvider({ children }) {
     setHeldBrightNode('L-04');
     setActiveLamps(['L-03', 'L-04', 'L-08']);
     showToast(`Demo SOS alert ${newId} dispatched to Security Operations.`, 'warning');
+    return newId;
+  };
+
+  // Fall Detection Simulation Demo
+  const triggerFallDetectionDemo = () => {
+    setFallDetectionActive(true);
+    showToast('Simulated phone accelerometer fall impact (3.8G)!', 'warning');
+  };
+
+  const cancelFallDetection = () => {
+    setFallDetectionActive(false);
+  };
+
+  // Walking Demo: advance to next node and trigger safety confirmation modal
+  const triggerWalkingDemo = () => {
+    const route = SCHEMATIC_ROUTES[selectedRouteId] || SCHEMATIC_ROUTES.A;
+    const nextIdx = (checkpointIndex + 1) % route.nodes.length;
+    const nextNodeId = route.nodes[nextIdx];
+
+    setCheckpointIndex(nextIdx);
+    const passed = route.nodes.slice(0, nextIdx + 1);
+    setPassedCheckpoints(passed);
+
+    // Light up corridor ahead
+    const ahead = route.nodes.slice(nextIdx, nextIdx + 3);
+    setActiveLamps(ahead);
+
+    // Log checkpoint event
+    const newEvent = {
+      id: `CP-${Date.now().toString().slice(-4)}`,
+      checkpointId: nextNodeId,
+      checkpointName: SCHEMATIC_NODES.find(n => n.id === nextNodeId)?.name || nextNodeId,
+      residentName: RESIDENT_PROFILE.title,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      status: 'Passed',
+      source: 'Walking Demo Sensor'
+    };
+    setCheckpointEvents(prev => [newEvent, ...prev]);
+
+    // Popup safety confirmation message
+    setMissedCheckpointPrompt(true);
+    showToast(`Arrived at Node ${nextNodeId}. Please confirm your safety.`, 'info');
   };
 
   // Submit hazard report (Scene 5 - Screen R9)
-  const submitHazardReport = ({ category, location, severity, description, affectedNode = 'L-04' }) => {
+  const submitHazardReport = ({ category, location, severity, description, title, contactInfo, affectedNode = 'L-04' }) => {
     const nextNum = hazards.length + 101;
     const newId = `HZ-${nextNum}`;
 
     const newHazard = {
       id: newId,
-      title: `${category.split('/')[0].trim()} at ${location}`,
+      title: title || `${category.split('/')[0].trim()} at ${location}`,
       category,
       location,
+      contactInfo: contactInfo || '',
       affectedNode,
       routesAffected: affectedNode === 'L-04' ? ['A'] : ['B'],
       severity,
@@ -408,6 +492,7 @@ export function NightSafeProvider({ children }) {
     localStorage.removeItem('ns_alerts');
     localStorage.removeItem('ns_hazards');
     localStorage.removeItem('ns_checkpoints');
+    localStorage.removeItem('ns_pin_config');
 
     showToast('Demo scenario reset to initial clean state.', 'info');
   };
@@ -443,6 +528,8 @@ export function NightSafeProvider({ children }) {
         // Journey State
         selectedRouteId,
         setSelectedRouteId,
+        routeCategory,
+        setRouteCategory,
         journeyStatus,
         checkpointIndex,
         passedCheckpoints,
@@ -463,6 +550,10 @@ export function NightSafeProvider({ children }) {
         endJourney,
         triggerDuressPin,
         triggerSos,
+        fallDetectionActive,
+        triggerFallDetectionDemo,
+        cancelFallDetection,
+        triggerWalkingDemo,
         submitHazardReport,
 
         // Security Actions
@@ -488,11 +579,11 @@ export function NightSafeProvider({ children }) {
         showToast,
         resetDemoScenario,
 
-        // Storyline Helper
-        storylineStep,
-        setStorylineStep,
-        isStorylineDrawerOpen,
-        setIsStorylineDrawerOpen
+        // Storyline Helper (safe no-op fallbacks)
+        storylineStep: 0,
+        setStorylineStep: () => {},
+        isStorylineDrawerOpen: false,
+        setIsStorylineDrawerOpen: () => {}
       }}
     >
       {children}

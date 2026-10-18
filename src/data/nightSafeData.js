@@ -1,6 +1,20 @@
 // NightSafe Loop - Shared Data Model & Simulated Scenario
 // Hackathon Context: Sime Darby Property University Hackathon 2026
 
+import {
+  BROKEN_STREET_LIGHT_IMG,
+  OVERGROWN_VEGETATION_IMG,
+  DAMAGED_PATHWAY_IMG
+} from '../assets/hazardImages';
+
+export {
+  CITY_OF_ELMINA_DATA,
+  ELMINA_CATEGORIES,
+  ELMINA_LOCATIONS,
+  searchElminaLocations,
+  getLocationsByCategory
+} from './cityOfElminaAreas';
+
 export const TOWNSHIP_INFO = {
   name: "Sime Darby Property — Sample Township (Demo Environment)",
   badge: "Prototype Demo · Simulated Data",
@@ -11,12 +25,12 @@ export const TOWNSHIP_INFO = {
 
 export const RESIDENT_PROFILE = {
   name: "Aina",
-  title: "Aina (Demo Resident)",
+  title: "Aina",
   origin: "Community Residence",
   destination: "Central Transit Stop",
   estimatedTime: "8–10 min",
-  emergencyContact: "Demo Contact",
-  phoneSimulated: "Only active during journey simulation",
+  emergencyContact: "Emergency Contact",
+  phoneSimulated: "Active during journey",
   duressPin: "9142",
   duressPinEnabled: true
 };
@@ -144,34 +158,58 @@ export const SCHEMATIC_ROUTES = {
     recommendationReason: "Contains multiple environmental penalties: lighting deficiency, overgrown vegetation obstructing sightlines, and damaged pavement section.",
     caveat: "Route cost is an illustrative environmental model index, not a guarantee of safety or crime prevention.",
     confidence: "Medium (pending physical inspection of pavers)"
+  },
+  C: {
+    id: "C",
+    name: "Courtyard Link",
+    tagline: "Shortest walking path via residential inner courtyard",
+    durationMinutes: 8,
+    distanceMeters: 520,
+    nodes: ["L-01", "L-05", "L-07", "L-08"],
+    baseTimeIndex: 16,
+    penalties: {
+      lighting: 5,
+      sightline: 2,
+      pathway: 1
+    },
+    totalCost: 26,
+    recommended: false,
+    recommendationReason: "Shortest physical corridor connecting directly through courtyard gates with moderate night illumination.",
+    caveat: "Route cost is an illustrative environmental model index, not a guarantee of safety or crime prevention.",
+    confidence: "High (residential pathway check)"
   }
 };
 
-// Initial Hazards dataset (Section 5)
+// Initial Hazards dataset — 3 feeds matched to actual site photos
 export const INITIAL_HAZARDS = [
   {
-    id: "HZ-101",
-    title: "Lighting deficiency at Junction L-04",
-    category: "Lighting deficiency / faulty streetlight",
-    location: "Junction L-04 (Central Boulevard)",
-    affectedNode: "L-04",
-    routesAffected: ["A"],
+    id: "HZ-103",
+    title: "Severely cracked and broken pedestrian pathway",
+    category: "Damaged / discontinuous pedestrian path",
+    feedCategory: "Damaged Path",
+    location: "Garden Shortcut midpoint",
+    affectedNode: "L-06",
+    routesAffected: ["B"],
     severity: "High",
-    pedestrianExposure: "High",
+    pedestrianExposure: "Medium",
     urgency: "High",
-    evidenceConfidence: "Medium",
-    status: "Reported", // 'Reported' | 'Under verification' | 'Verified' | 'In progress' | 'Resolved'
+    evidenceConfidence: "High",
+    status: "Reported",
+    reportDate: "17 Oct 2026",
+    figureUrl: DAMAGED_PATHWAY_IMG,
+    figureCaption: "Severely fractured concrete path with exposed rubble and deep fissures",
     source: "Resident report",
-    timestamp: "8:42 PM · Demo data",
-    reportedBy: "Resident (Simulated)",
-    description: "Sodium-vapour luminaire flickers intermittently and dims to < 5 lux on pedestrian crossing.",
-    estimatedCost: 1800,
-    pairedInterventionId: "IN-01"
+    timestamp: "7:10 PM",
+    reportedBy: "Alex Chen (Resident)",
+    description: "The concrete pedestrian pathway at the Garden Shortcut midpoint has severely cracked and broken apart, with exposed gravel and rubble. The surface is highly uneven and poses a significant trip and fall hazard, especially at night.",
+    estimatedCost: 4500,
+    pairedInterventionId: "IN-03"
   },
   {
     id: "HZ-102",
-    title: "Overgrown vegetation obstructing sightline",
+    title: "Overgrown vegetation blocking pedestrian sightline",
     category: "Obstructed sightline",
+    feedCategory: "Overgrown Vege",
     location: "Garden Shortcut near Lamp L-06",
     affectedNode: "L-06",
     routesAffected: ["B"],
@@ -180,50 +218,38 @@ export const INITIAL_HAZARDS = [
     urgency: "Medium",
     evidenceConfidence: "High",
     status: "Under verification",
+    reportDate: "18 Oct 2026",
+    figureUrl: OVERGROWN_VEGETATION_IMG,
+    figureCaption: "Dense overhanging tree branches encroaching across the roadside walkway",
     source: "Property Grounds Inspection",
-    timestamp: "5:15 PM · Demo data",
-    reportedBy: "Landscape Inspector (Simulated)",
-    description: "Thick ficus branches have grown across the pedestrian sightline between L-05 and L-06 bend.",
+    timestamp: "5:15 PM",
+    reportedBy: "Anonymous Resident",
+    description: "Heavy tree branches and overgrown shrubs are hanging over the walkway, blocking sightlines around the bend near Lamp L-06. Workers are visible attempting to clear the obstruction.",
     estimatedCost: 900,
     pairedInterventionId: "IN-02"
   },
   {
-    id: "HZ-103",
-    title: "Uneven / damaged pathway section",
-    category: "Damaged / discontinuous pedestrian path",
-    location: "Garden Shortcut midpoint",
-    affectedNode: "L-06",
-    routesAffected: ["B"],
-    severity: "High",
-    pedestrianExposure: "Medium",
-    urgency: "High",
-    evidenceConfidence: "Medium",
-    status: "Reported",
-    source: "Resident report",
-    timestamp: "7:10 PM · Demo data",
-    reportedBy: "Resident (Simulated)",
-    description: "Tree root heaving has cracked 6 linear metres of interlocking concrete paving; trip hazard in poor light.",
-    estimatedCost: 4500,
-    pairedInterventionId: "IN-03"
-  },
-  {
-    id: "HZ-104",
-    title: "Streetlight flickering near Central Transit Stop",
+    id: "HZ-101",
+    title: "Broken street lamp cover at pedestrian junction",
     category: "Lighting deficiency / faulty streetlight",
-    location: "Lamp L-08 (Transit Approach)",
-    affectedNode: "L-08",
-    routesAffected: ["A", "B"],
-    severity: "Medium",
+    feedCategory: "Light Broken",
+    location: "Junction L-04 (Central Boulevard)",
+    affectedNode: "L-04",
+    routesAffected: ["A"],
+    severity: "High",
     pedestrianExposure: "High",
-    urgency: "Medium",
-    evidenceConfidence: "Low",
-    status: "Needs verification",
+    urgency: "High",
+    evidenceConfidence: "High",
+    status: "Reported",
+    reportDate: "18 Oct 2026",
+    figureUrl: BROKEN_STREET_LIGHT_IMG,
+    figureCaption: "Street lamp casing completely shattered, bulb exposed to weather",
     source: "Resident report",
-    timestamp: "9:02 PM · Demo data",
-    reportedBy: "Commuter (Simulated)",
-    description: "LED driver cycles every 40 seconds near the pedestrian ramp leading into LRT station.",
-    estimatedCost: 1200,
-    pairedInterventionId: "IN-04"
+    timestamp: "8:42 PM",
+    reportedBy: "Aina (Resident)",
+    description: "The lamp cover on the streetlight at Junction L-04 is completely shattered. The bare bulb and wiring are exposed to rain, creating both a safety and electrical hazard for passing pedestrians.",
+    estimatedCost: 1800,
+    pairedInterventionId: "IN-01"
   }
 ];
 

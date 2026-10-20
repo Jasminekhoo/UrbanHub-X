@@ -27,8 +27,46 @@ import {
   Info,
   Footprints,
   Smartphone,
-  RotateCcw
+  RotateCcw,
+  LayoutDashboard,
+  ListChecks,
+  Wallet,
+  ChevronDown
 } from 'lucide-react';
+
+// The eight M-screens collapsed into three logical nav sections.
+// `propertyTab` stays the single source of truth — this is presentation only.
+const NAV_GROUPS = [
+  {
+    id: 'overview-map',
+    label: 'Overview & Map',
+    icon: LayoutDashboard,
+    items: [
+      { id: 'overview', label: 'Management Overview', code: 'M1', icon: TrendingUp },
+      { id: 'hazard-map', label: 'Township Hazard Map', code: 'M2', icon: MapPin },
+      { id: 'lighting', label: 'Lighting Status', code: 'M7', icon: Lightbulb }
+    ]
+  },
+  {
+    id: 'action-queue',
+    label: 'Action Queue',
+    icon: ListChecks,
+    items: [
+      { id: 'reports', label: 'Verification Queue', code: 'M3', icon: FileText },
+      { id: 'ranking', label: 'Priority Ranking', code: 'M4', icon: Sliders }
+    ]
+  },
+  {
+    id: 'budget-impact',
+    label: 'Budget & Impact',
+    icon: Wallet,
+    items: [
+      { id: 'budget', label: 'Budget Optimisation', code: 'M5', icon: DollarSign },
+      { id: 'route-impact', label: 'Route Impact ΔC', code: 'M6', icon: TrendingUp },
+      { id: 'assumptions', label: 'Model Assumptions', code: 'M8', icon: HelpCircle }
+    ]
+  }
+];
 
 export function PropertyDashboard() {
   const { 
@@ -58,6 +96,16 @@ export function PropertyDashboard() {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
 
+  // Consistent action styling: brand-teal primary vs neutral-outline secondary
+  const BTN_PRIMARY =
+    'rounded-lg bg-[#1F9D8B] hover:bg-[#178270] text-white font-bold text-xs shadow-sm inline-flex items-center justify-center gap-2 transition-colors';
+  const BTN_SECONDARY =
+    'rounded-lg bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs border border-slate-300 shadow-sm inline-flex items-center justify-center gap-2 transition-colors';
+
+  // Which nav section owns the current tab (derived — no extra state to desync)
+  const activeGroup =
+    NAV_GROUPS.find(g => g.items.some(i => i.id === propertyTab)) || NAV_GROUPS[0];
+
   // Selected Hazard for Inspection
   const activeHazard = hazards.find(h => h.id === selectedHazardId) || hazards[0];
   const [selectedRankedId, setSelectedRankedId] = useState('HZ-101');
@@ -70,6 +118,15 @@ export function PropertyDashboard() {
   const openHazards = hazards.filter(h => h.status !== 'Resolved').length;
   const highPriority = hazards.filter(h => h.severity === 'High' && h.status !== 'Resolved').length;
   const awaitingVerification = hazards.filter(h => h.status === 'Reported' || h.status === 'Under verification' || h.status === 'Needs verification').length;
+
+  // Consolidated summary-bar metrics (replaces the 5 standalone metric cards)
+  const summaryMetrics = [
+    { label: 'Open Hazards', value: openHazards, hint: 'Lighting & Pathways', valueTone: 'text-slate-900', hintTone: 'text-slate-400' },
+    { label: 'High-Priority Items', value: highPriority, hint: 'Require Mitigation', valueTone: 'text-[#C83E4D]', hintTone: 'text-red-600' },
+    { label: 'Awaiting Verification', value: awaitingVerification, hint: 'Grounds Check Queue', valueTone: 'text-amber-600', hintTone: 'text-amber-600' },
+    { label: 'Illustrative Budget', value: `RM ${budget.toLocaleString()}`, hint: 'Default Allocation', valueTone: 'text-[#2864A6]', hintTone: 'text-sky-600' },
+    { label: 'Modelled Route Cost ΔC', value: planApplied ? `-${routeACost.delta} pts` : '0 pts', hint: planApplied ? 'Plan Applied to Simulation' : 'Pending Plan Application', valueTone: 'text-emerald-600', hintTone: 'text-emerald-600' }
+  ];
 
   // Filtered reports
   const filteredHazards = hazards.filter(h => {
@@ -156,127 +213,66 @@ export function PropertyDashboard() {
                 <span className="text-[10px] text-teal-300 font-mono">Operations Decision Support</span>
               </div>
             </div>
-            <div className="pt-2">
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-teal-950 text-teal-300 border border-teal-700/60 uppercase tracking-wider inline-block">
-                Budget & Environmental Model
-              </span>
-            </div>
           </div>
 
-          {/* Navigation Links */}
-          <nav className="space-y-1 text-xs font-semibold">
-            <button
-              onClick={() => setPropertyTab('overview')}
-              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition ${
-                propertyTab === 'overview'
-                  ? 'bg-[#2864A6] text-white shadow-sm'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800'
-              }`}
-            >
-              <TrendingUp className="w-4 h-4" />
-              <span>Management Overview (M1)</span>
-            </button>
+          {/* Navigation Links — 8 screens grouped into 3 sections */}
+          <nav className="space-y-1.5 text-xs font-semibold">
+            {NAV_GROUPS.map((group) => {
+              const GroupIcon = group.icon;
+              const isActiveGroup = activeGroup.id === group.id;
 
-            <button
-              onClick={() => setPropertyTab('hazard-map')}
-              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition ${
-                propertyTab === 'hazard-map'
-                  ? 'bg-[#2864A6] text-white shadow-sm'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800'
-              }`}
-            >
-              <MapPin className="w-4 h-4" />
-              <span>Township Hazard Map (M2)</span>
-            </button>
+              return (
+                <div key={group.id}>
+                  <button
+                    onClick={() => setPropertyTab(group.items[0].id)}
+                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition ${
+                      isActiveGroup
+                        ? 'bg-[#2864A6] text-white shadow-sm'
+                        : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2.5">
+                      <GroupIcon className="w-4 h-4" />
+                      <span>{group.label}</span>
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      {group.id === 'action-queue' && awaitingVerification > 0 && (
+                        <span className={`min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold flex items-center justify-center ${
+                          isActiveGroup ? 'bg-white/20 text-white' : 'bg-amber-500 text-slate-950'
+                        }`}>
+                          {awaitingVerification}
+                        </span>
+                      )}
+                      <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${isActiveGroup ? 'rotate-180' : 'opacity-60'}`} />
+                    </span>
+                  </button>
 
-            <button
-              onClick={() => setPropertyTab('reports')}
-              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition ${
-                propertyTab === 'reports'
-                  ? 'bg-[#2864A6] text-white shadow-sm'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800'
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <FileText className="w-4 h-4" />
-                <span>Verification Queue (M3)</span>
-              </div>
-              {awaitingVerification > 0 && (
-                <span className="w-4 h-4 rounded-full bg-amber-500 text-slate-950 font-bold text-[10px] flex items-center justify-center">
-                  {awaitingVerification}
-                </span>
-              )}
-            </button>
-
-            <button
-              onClick={() => setPropertyTab('ranking')}
-              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition ${
-                propertyTab === 'ranking'
-                  ? 'bg-[#2864A6] text-white shadow-sm'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800'
-              }`}
-            >
-              <Sliders className="w-4 h-4" />
-              <span>Priority Ranking (M4)</span>
-            </button>
-
-            <button
-              onClick={() => setPropertyTab('budget')}
-              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition ${
-                propertyTab === 'budget'
-                  ? 'bg-[#2864A6] text-white shadow-sm'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800'
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <DollarSign className="w-4 h-4" />
-                <span>Budget Optimisation (M5)</span>
-              </div>
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 font-mono">
-                RM {budget.toLocaleString()}
-              </span>
-            </button>
-
-            <button
-              onClick={() => setPropertyTab('route-impact')}
-              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition ${
-                propertyTab === 'route-impact'
-                  ? 'bg-[#2864A6] text-white shadow-sm'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800'
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <TrendingUp className="w-4 h-4" />
-                <span>Route Impact ΔC (M6)</span>
-              </div>
-              {planApplied && (
-                <span className="text-[10px] font-bold text-emerald-400">Δ -{routeACost.delta}</span>
-              )}
-            </button>
-
-            <button
-              onClick={() => setPropertyTab('lighting')}
-              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition ${
-                propertyTab === 'lighting'
-                  ? 'bg-[#2864A6] text-white shadow-sm'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800'
-              }`}
-            >
-              <Lightbulb className="w-4 h-4" />
-              <span>Lighting Status (M7)</span>
-            </button>
-
-            <button
-              onClick={() => setPropertyTab('assumptions')}
-              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition ${
-                propertyTab === 'assumptions'
-                  ? 'bg-[#2864A6] text-white shadow-sm'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800'
-              }`}
-            >
-              <HelpCircle className="w-4 h-4" />
-              <span>Model Assumptions (M8)</span>
-            </button>
+                  {isActiveGroup && (
+                    <div className="mt-1 ml-3 pl-3 border-l border-slate-700 space-y-0.5">
+                      {group.items.map((item) => {
+                        const ItemIcon = item.icon;
+                        const isActive = propertyTab === item.id;
+                        return (
+                          <button
+                            key={item.id}
+                            onClick={() => setPropertyTab(item.id)}
+                            className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[11px] transition ${
+                              isActive
+                                ? 'bg-white/10 text-white font-bold'
+                                : 'text-slate-400 hover:text-white hover:bg-slate-800/70'
+                            }`}
+                          >
+                            <ItemIcon className="w-3.5 h-3.5" />
+                            <span className="flex-1 text-left">{item.label}</span>
+                            <span className="text-[9px] font-mono opacity-50">{item.code}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </nav>
         </div>
 
@@ -293,41 +289,30 @@ export function PropertyDashboard() {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 p-6 overflow-y-auto space-y-6">
-        {/* Top Summary Cards (Screen M1) */}
-        <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
-          <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
-            <div className="text-xs font-semibold text-slate-500">Open Hazards</div>
-            <div className="text-2xl font-black text-slate-900 mt-1">{openHazards}</div>
-            <div className="text-[11px] text-slate-400 mt-0.5">Lighting & Pathways</div>
-          </div>
-
-          <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
-            <div className="text-xs font-semibold text-slate-500">High-Priority Items</div>
-            <div className="text-2xl font-black text-[#C83E4D] mt-1">{highPriority}</div>
-            <div className="text-[11px] text-red-600 mt-0.5 font-medium">Require Mitigation</div>
-          </div>
-
-          <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
-            <div className="text-xs font-semibold text-slate-500">Awaiting Verification</div>
-            <div className="text-2xl font-black text-amber-600 mt-1">{awaitingVerification}</div>
-            <div className="text-[11px] text-amber-600 mt-0.5 font-medium">Grounds Check Queue</div>
-          </div>
-
-          <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
-            <div className="text-xs font-semibold text-slate-500">Illustrative Budget</div>
-            <div className="text-2xl font-black text-[#2864A6] mt-1">RM {budget.toLocaleString()}</div>
-            <div className="text-[11px] text-sky-600 mt-0.5 font-medium">Default Allocation</div>
-          </div>
-
-          <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
-            <div className="text-xs font-semibold text-slate-500">Modelled Route Cost ΔC</div>
-            <div className="text-2xl font-black text-emerald-600 mt-1">
-              {planApplied ? `-${routeACost.delta} pts` : '0 pts'}
-            </div>
-            <div className="text-[11px] text-emerald-600 mt-0.5 font-medium">
-              {planApplied ? 'Plan Applied to Simulation' : 'Pending Plan Application'}
-            </div>
+      <main className="flex-1 p-8 overflow-y-auto space-y-8">
+        {/* Consolidated summary bar (formerly 5 separate metric cards) */}
+        <div className="rounded-xl bg-white border border-slate-200 shadow-sm overflow-hidden">
+          <div className="flex flex-col sm:flex-row sm:items-stretch">
+            {summaryMetrics.map((m, idx) => (
+              <div
+                key={m.label}
+                className={`flex-1 min-w-[150px] px-5 py-3.5 ${
+                  idx < summaryMetrics.length - 1
+                    ? 'border-b border-slate-100 sm:border-b-0 sm:border-r sm:border-slate-200'
+                    : ''
+                }`}
+              >
+                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  {m.label}
+                </div>
+                <div className={`mt-1 text-xl font-black leading-none ${m.valueTone}`}>
+                  {m.value}
+                </div>
+                <div className={`mt-1.5 text-[11px] font-medium ${m.hintTone}`}>
+                  {m.hint}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
@@ -336,9 +321,9 @@ export function PropertyDashboard() {
            ------------------------------------------------------------- */}
         {propertyTab === 'overview' && (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
               {/* Map Panel (7 cols) */}
-              <div className="lg:col-span-7 p-5 rounded-xl bg-white border border-slate-200 shadow-sm space-y-3">
+              <div className="lg:col-span-7 p-6 rounded-xl bg-white border border-slate-200 shadow-sm space-y-3">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                     <MapPin className="w-4 h-4 text-[#2864A6]" />
@@ -363,7 +348,7 @@ export function PropertyDashboard() {
               </div>
 
               {/* Quick Decision Support & Priority Panel (5 cols) */}
-              <div className="lg:col-span-5 p-5 rounded-xl bg-white border border-slate-200 shadow-sm space-y-3">
+              <div className="lg:col-span-5 p-6 rounded-xl bg-white border border-slate-200 shadow-sm space-y-3">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-bold text-slate-900">Priority Action Queue</h3>
                   <button 
@@ -410,7 +395,7 @@ export function PropertyDashboard() {
                 <div className="pt-2">
                   <button
                     onClick={() => setPropertyTab('budget')}
-                    className="w-full py-2.5 px-3 rounded-lg bg-[#2864A6] hover:bg-[#1E3C66] text-white font-bold text-xs shadow flex items-center justify-center gap-2 transition"
+                    className={`w-full py-2.5 px-4 ${BTN_PRIMARY}`}
                   >
                     <DollarSign className="w-4 h-4" />
                     <span>Run RM 5,000 Budget Optimisation (Scene 7)</span>
@@ -425,8 +410,8 @@ export function PropertyDashboard() {
             SCREEN M2: HAZARD MAP (WITH PIN INSPECTION)
            ------------------------------------------------------------- */}
         {propertyTab === 'hazard-map' && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <div className="lg:col-span-8 p-5 rounded-xl bg-white border border-slate-200 shadow-sm space-y-3">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div className="lg:col-span-8 p-6 rounded-xl bg-white border border-slate-200 shadow-sm space-y-3">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-sm font-bold text-slate-900">Township Hazard Geolocation</h3>
@@ -447,7 +432,7 @@ export function PropertyDashboard() {
             </div>
 
             {/* Inspector Panel for selected hazard */}
-            <div className="lg:col-span-4 p-5 rounded-xl bg-white border border-slate-200 shadow-sm space-y-4">
+            <div className="lg:col-span-4 p-6 rounded-xl bg-white border border-slate-200 shadow-sm space-y-4">
               <h3 className="text-sm font-bold text-slate-900 border-b pb-2">Hazard Inspector</h3>
 
               {activeHazard ? (
@@ -523,7 +508,7 @@ export function PropertyDashboard() {
             SCREEN M3: REPORTS & VERIFICATION TABLE
            ------------------------------------------------------------- */}
         {propertyTab === 'reports' && (
-          <div className="p-5 rounded-xl bg-white border border-slate-200 shadow-sm space-y-4">
+          <div className="p-6 rounded-xl bg-white border border-slate-200 shadow-sm space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <h3 className="text-sm font-bold text-slate-900">Reports & Verification Queue</h3>
@@ -725,9 +710,9 @@ export function PropertyDashboard() {
             </div>
 
             {/* 2-Column: Ranked Table (8 cols) + "Why this rank?" Side Panel (4 cols) */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
               {/* Left 8 cols: Ranked Table */}
-              <div className="lg:col-span-8 p-5 rounded-xl bg-white border border-slate-200 shadow-sm space-y-4">
+              <div className="lg:col-span-8 p-6 rounded-xl bg-white border border-slate-200 shadow-sm space-y-4">
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
                     Dynamic Ranked Interventions Queue
@@ -787,7 +772,7 @@ export function PropertyDashboard() {
               </div>
 
               {/* Right 4 cols: "Why this rank?" Side Panel */}
-              <div className="lg:col-span-4 p-5 rounded-xl bg-white border border-slate-200 shadow-sm space-y-4">
+              <div className="lg:col-span-4 p-6 rounded-xl bg-white border border-slate-200 shadow-sm space-y-4">
                 {(() => {
                   const currentItem = rankedHazards.find(h => h.id === (selectedRankedId || rankedHazards[0].id)) || rankedHazards[0];
                   const rankPos = rankedHazards.findIndex(h => h.id === currentItem.id) + 1;
@@ -871,7 +856,7 @@ export function PropertyDashboard() {
         {propertyTab === 'budget' && (
           <div className="space-y-6">
             {/* Budget Input & Knapsack Runner Card */}
-            <div className="p-5 rounded-xl bg-white border border-slate-200 shadow-sm space-y-4">
+            <div className="p-6 rounded-xl bg-white border border-slate-200 shadow-sm space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
@@ -937,7 +922,7 @@ export function PropertyDashboard() {
                 <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 flex flex-col justify-center">
                   <button
                     onClick={applySelectedPlan}
-                    className="w-full py-2.5 px-3 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs shadow flex items-center justify-center gap-1.5 transition"
+                    className={`w-full py-2.5 px-4 ${BTN_PRIMARY}`}
                   >
                     <Check className="w-4 h-4" />
                     <span>Apply Plan to Simulation</span>
@@ -947,9 +932,9 @@ export function PropertyDashboard() {
             </div>
 
             {/* Candidate Interventions Catalogue */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
               {/* Selected Feasible Package (7 cols) */}
-              <div className="lg:col-span-7 p-5 rounded-xl bg-white border border-slate-200 shadow-sm space-y-4">
+              <div className="lg:col-span-7 p-6 rounded-xl bg-white border border-slate-200 shadow-sm space-y-4">
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-800 flex items-center gap-1.5">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600" />
@@ -990,7 +975,7 @@ export function PropertyDashboard() {
               </div>
 
               {/* Excluded Interventions & Rationale (5 cols) */}
-              <div className="lg:col-span-5 p-5 rounded-xl bg-white border border-slate-200 shadow-sm space-y-4">
+              <div className="lg:col-span-5 p-6 rounded-xl bg-white border border-slate-200 shadow-sm space-y-4">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
                   Excluded Interventions & Explanations ({optimisedPlan.excludedItems.length})
                 </h4>
@@ -1016,7 +1001,7 @@ export function PropertyDashboard() {
             </div>
 
             {/* Alternative Feasible Maintenance Packages Comparison (Screen M5 Spec) */}
-            <div className="p-5 rounded-xl bg-white border border-slate-200 shadow-sm space-y-4">
+            <div className="p-6 rounded-xl bg-white border border-slate-200 shadow-sm space-y-4">
               <div className="flex items-center justify-between">
                 <div>
                   <h4 className="text-sm font-bold text-slate-900">Alternative Package Sensitivity Comparison</h4>
@@ -1075,7 +1060,7 @@ export function PropertyDashboard() {
             SCREEN M6: ROUTE IMPACT / BEFORE AND AFTER
            ------------------------------------------------------------- */}
         {propertyTab === 'route-impact' && (
-          <div className="p-5 rounded-xl bg-white border border-slate-200 shadow-sm space-y-6">
+          <div className="p-6 rounded-xl bg-white border border-slate-200 shadow-sm space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-4">
               <div>
                 <h3 className="text-base font-bold text-slate-900">Before & After Route Impact Analysis</h3>
@@ -1088,14 +1073,14 @@ export function PropertyDashboard() {
                 {planApplied ? (
                   <button
                     onClick={resetAppliedPlan}
-                    className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold"
+                    className={`px-3.5 py-2 ${BTN_SECONDARY}`}
                   >
                     Reset to Baseline
                   </button>
                 ) : (
                   <button
                     onClick={applySelectedPlan}
-                    className="px-3.5 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold shadow"
+                    className={`px-4 py-2 ${BTN_PRIMARY}`}
                   >
                     Apply Selected Plan
                   </button>
@@ -1233,7 +1218,7 @@ export function PropertyDashboard() {
             SCREEN M7: LIGHTING STATUS / CORRIDOR SIMULATION
            ------------------------------------------------------------- */}
         {propertyTab === 'lighting' && (
-          <div className="p-5 rounded-xl bg-white border border-slate-200 shadow-sm space-y-4">
+          <div className="p-6 rounded-xl bg-white border border-slate-200 shadow-sm space-y-4">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-bold text-slate-900">Streetlight Node Simulation Registry</h3>
@@ -1285,7 +1270,7 @@ export function PropertyDashboard() {
             SCREEN M8: MODEL ASSUMPTIONS & DATA QUALITY
            ------------------------------------------------------------- */}
         {propertyTab === 'assumptions' && (
-          <div className="p-5 rounded-xl bg-white border border-slate-200 shadow-sm space-y-4">
+          <div className="p-6 rounded-xl bg-white border border-slate-200 shadow-sm space-y-4">
             <h3 className="text-base font-bold text-slate-900">Prototype Assumptions & Data Governance</h3>
 
             <div className="space-y-3 text-xs text-slate-700 leading-relaxed">

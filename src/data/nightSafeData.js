@@ -317,8 +317,101 @@ export const CANDIDATE_INTERVENTIONS = [
   }
 ];
 
-// Initial Alerts (Empty by default until triggered by presenter in demo storyline)
-export const INITIAL_ALERTS = [];
+// Initial Alerts — seeded demo queue so the Security console is populated on first
+// load. Presenter can still trigger new Duress PIN / SOS cases on top of these.
+export const INITIAL_ALERTS = [
+  {
+    id: "AL-204",
+    type: "Discreet Duress Alert",
+    severity: "High",
+    resident: "Aina (Demo Resident)",
+    residentId: "RES-8821",
+    location: "Near Lamp L-07, Garden Junction",
+    lastCheckpoint: "L-07 · 9:14 PM",
+    alertReceived: "9:15 PM",
+    locationFreshness: "Last available demo location — not live tracking",
+    status: "Awaiting security acknowledgement",
+    lightingResponse: "Simulated — nearby route lights held at high brightness",
+    notes: [],
+    category: "Personal Safety (Discreet)",
+    timestamp: "9:15 PM",
+    isDuress: true
+  },
+  {
+    id: "AL-946",
+    type: "Emergency SOS Alert",
+    severity: "High",
+    resident: "Aina (Demo Resident)",
+    residentId: "RES-8821",
+    location: "Near Lamp L-04 (Central Boulevard Junction)",
+    lastCheckpoint: "L-03 · 9:12 PM",
+    alertReceived: "9:22 PM",
+    locationFreshness: "Last available demo location — not live tracking",
+    status: "Awaiting security acknowledgement",
+    lightingResponse: "Simulated — nearby route lights held at high brightness",
+    notes: [],
+    category: "Personal Safety",
+    timestamp: "9:22 PM",
+    isDuress: false
+  },
+  {
+    id: "AL-941",
+    type: "Emergency SOS Alert",
+    severity: "High",
+    resident: "Marcus Lim (Demo Resident)",
+    residentId: "RES-7734",
+    location: "Near Lamp L-06 (Garden Shortcut Path)",
+    lastCheckpoint: "L-05 · 9:08 PM",
+    alertReceived: "9:11 PM",
+    locationFreshness: "Last available demo location — not live tracking",
+    status: "Response in progress",
+    lightingResponse: "Simulated — corridor L-05 to L-07 held at high brightness",
+    notes: [
+      "9:12 PM — Officer: Alert acknowledged by Duty Security Lead.",
+      "9:14 PM — Officer: Patrol unit dispatched to Garden Shortcut Path."
+    ],
+    category: "Personal Safety",
+    timestamp: "9:11 PM",
+    isDuress: false
+  },
+  {
+    id: "AL-938",
+    type: "Missed Checkpoint / No Response",
+    severity: "Medium",
+    resident: "Aina (Demo Resident)",
+    residentId: "RES-8821",
+    location: "Near Lamp L-03 (Main Avenue Pedestrian Walkway)",
+    lastCheckpoint: "L-02 · 9:09 PM",
+    alertReceived: "9:05 PM",
+    locationFreshness: "Simulated checkpoint overdue · Prompt unconfirmed",
+    status: "Acknowledged",
+    lightingResponse: "Simulated — path lights held active",
+    notes: ["9:06 PM — Officer: Wellbeing callback attempted, pending resident reply."],
+    category: "Checkpoint Overdue",
+    timestamp: "9:05 PM",
+    isDuress: false
+  },
+  {
+    id: "AL-469",
+    type: "Emergency SOS Alert",
+    severity: "High",
+    resident: "Priya Nair (Demo Resident)",
+    residentId: "RES-6612",
+    location: "Near Lamp L-02 (North Avenue Junction)",
+    lastCheckpoint: "L-01 · 8:52 PM",
+    alertReceived: "8:54 PM",
+    locationFreshness: "Last available demo location — not live tracking",
+    status: "Resolved — demo",
+    lightingResponse: "Simulated — corridor returned to normal mode",
+    notes: [
+      "8:56 PM — Officer: Patrol guard arrived on scene, resident safe.",
+      "9:02 PM — Officer: Case closed, luminaires returned to corridor mode."
+    ],
+    category: "Personal Safety",
+    timestamp: "8:54 PM",
+    isDuress: false
+  }
+];
 
 // Preconfigured Duress Alert (Scene 3 & 4)
 export const DURESS_ALERT_SEED = {
@@ -356,6 +449,60 @@ export const INITIAL_CHECKPOINT_EVENTS = [
     checkpointName: "North Avenue Junction",
     residentName: "Aina (Demo Resident)",
     timestamp: "9:09 PM",
+    status: "Passed",
+    source: "Simulated GPS Node"
+  },
+  {
+    id: "CP-303",
+    checkpointId: "L-03",
+    checkpointName: "Main Avenue Pedestrian Walkway",
+    residentName: "Aina (Demo Resident)",
+    timestamp: "9:12 PM",
+    status: "Passed",
+    source: "Simulated GPS Node"
+  },
+  {
+    id: "CP-304",
+    checkpointId: "L-04",
+    checkpointName: "Central Boulevard Junction",
+    residentName: "Aina (Demo Resident)",
+    timestamp: "9:16 PM",
+    status: "Passed",
+    source: "Simulated GPS Node"
+  },
+  {
+    id: "CP-305",
+    checkpointId: "L-05",
+    checkpointName: "Garden Shortcut East Gate",
+    residentName: "Marcus Lim (Demo Resident)",
+    timestamp: "9:08 PM",
+    status: "Passed",
+    source: "Simulated GPS Node"
+  },
+  {
+    id: "CP-306",
+    checkpointId: "L-06",
+    checkpointName: "Garden Shortcut Path",
+    residentName: "Marcus Lim (Demo Resident)",
+    timestamp: "9:10 PM",
+    status: "Passed",
+    source: "Simulated GPS Node"
+  },
+  {
+    id: "CP-307",
+    checkpointId: "L-07",
+    checkpointName: "Garden Junction",
+    residentName: "Aina (Demo Resident)",
+    timestamp: "9:14 PM",
+    status: "Passed",
+    source: "Simulated GPS Node"
+  },
+  {
+    id: "CP-308",
+    checkpointId: "L-08",
+    checkpointName: "Central Transit Stop",
+    residentName: "Priya Nair (Demo Resident)",
+    timestamp: "8:58 PM",
     status: "Passed",
     source: "Simulated GPS Node"
   }

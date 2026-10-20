@@ -49,6 +49,15 @@ export function SecurityDashboard() {
   // Selected alert object
   const activeAlert = alerts.find(a => a.id === selectedAlertId) || alerts[0];
 
+  // Append an officer note to the active case audit trail (Screen S2)
+  const handleAddNote = (e) => {
+    e.preventDefault();
+    const text = newNoteText.trim();
+    if (!text || !activeAlert) return;
+    addAlertNote(activeAlert.id, text);
+    setNewNoteText('');
+  };
+
   // Stats calculation
   const totalAlerts = alerts.length;
   const awaitingAck = alerts.filter(a => a.status === 'Awaiting security acknowledgement').length;

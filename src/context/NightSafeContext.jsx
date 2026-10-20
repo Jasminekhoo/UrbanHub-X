@@ -7,6 +7,7 @@ import {
   INITIAL_HAZARDS,
   CANDIDATE_INTERVENTIONS,
   DURESS_ALERT_SEED,
+  INITIAL_ALERTS,
   INITIAL_CHECKPOINT_EVENTS,
   solveKnapsackBudget,
   calculateRouteCost
@@ -75,10 +76,15 @@ export function NightSafeProvider({ children }) {
   });
   const [duressTriggered, setDuressTriggered] = useState(false);
 
-  // Security Alerts list
+  // Security Alerts list — seeded with demo queue on first load
   const [alerts, setAlerts] = useState(() => {
     const saved = localStorage.getItem('ns_alerts');
-    return saved ? JSON.parse(saved) : [];
+    if (!saved) return INITIAL_ALERTS;
+    try {
+      return JSON.parse(saved);
+    } catch {
+      return INITIAL_ALERTS;
+    }
   });
 
   // Hazards list — guaranteed reliable images and exact 3 feeds
@@ -416,7 +422,7 @@ export function NightSafeProvider({ children }) {
       if (a.id !== alertId) return a;
       return {
         ...a,
-        notes: [...a.notes, `${now} — Officer: ${noteText}`]
+        notes: [...(a.notes || []), `${now} — Officer: ${noteText}`]
       };
     }));
     showToast('Incident audit note appended.', 'success');
@@ -479,7 +485,7 @@ export function NightSafeProvider({ children }) {
     setActiveLamps(['L-01', 'L-02']);
     setHeldBrightNode(null);
     setDuressTriggered(false);
-    setAlerts([]);
+    setAlerts(INITIAL_ALERTS);
     setHazards(INITIAL_HAZARDS);
     setCheckpointEvents(INITIAL_CHECKPOINT_EVENTS);
     setBudget(5000);

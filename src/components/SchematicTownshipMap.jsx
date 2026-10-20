@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { SCHEMATIC_NODES, SCHEMATIC_ROUTES } from '../data/nightSafeData';
-import { AlertTriangle, Lightbulb, MapPin, Eye, AlertCircle, ShieldAlert } from 'lucide-react';
+import { AlertTriangle, Lightbulb, MapPin, Eye, AlertCircle, ShieldAlert, Layers, ChevronDown } from 'lucide-react';
 
 export function SchematicTownshipMap({
   theme = 'day', // 'day' | 'night'
@@ -19,6 +19,9 @@ export function SchematicTownshipMap({
   showHeader = true
 }) {
   const isNight = theme === 'night';
+
+  // Legend is collapsed by default so the map canvas stays fully visible
+  const [legendOpen, setLegendOpen] = useState(false);
 
   // SVG dimensions
   const width = 820;
@@ -456,34 +459,55 @@ export function SchematicTownshipMap({
           )}
         </svg>
 
-        {/* Floating Map Legend Overlay */}
+        {/* Collapsible Map Legend — collapsed by default so the canvas is unobstructed */}
         {showLegend && (
-          <div className={`absolute bottom-3 left-3 p-2.5 rounded-lg border text-[11px] backdrop-blur-md ${isNight ? 'bg-[#142B4A]/90 border-slate-700 text-slate-200' : 'bg-white/95 border-slate-200 text-slate-700'} shadow-lg space-y-1.5`}>
-            <div className="font-semibold text-[10px] tracking-wider uppercase opacity-80 border-b pb-1 mb-1 border-slate-600/40">
-              Schematic Legend
-            </div>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#F4B942] inline-block shadow-sm"></span>
-                <span>Active Smart Light</span>
+          <div className="absolute bottom-3 left-3 z-20 flex flex-col items-start gap-1.5">
+            {legendOpen && (
+              <div className={`p-2.5 rounded-lg border text-[11px] backdrop-blur-md shadow-lg ${isNight ? 'bg-[#142B4A]/95 border-slate-700 text-slate-200' : 'bg-white/95 border-slate-200 text-slate-700'}`}>
+                <div className="font-semibold text-[10px] tracking-wider uppercase opacity-80 border-b pb-1 mb-1.5 border-slate-600/40">
+                  Schematic Legend
+                </div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#F4B942] inline-block shadow-sm"></span>
+                    <span>Active Smart Light</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-slate-400 inline-block"></span>
+                    <span>Normal / Idle Light</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span>
+                    <span>Lighting Deficiency</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#C83E4D] inline-block"></span>
+                    <span>Reported Hazard / Alert</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 col-span-2">
+                    <span className="w-3 h-0.5 bg-[#F4B942] inline-block"></span>
+                    <span>Corridor Ahead of Resident</span>
+                  </div>
+                </div>
               </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-slate-400 inline-block"></span>
-                <span>Normal / Idle Light</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span>
-                <span>Lighting Deficiency</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#C83E4D] inline-block"></span>
-                <span>Reported Hazard / Alert</span>
-              </div>
-              <div className="flex items-center gap-1.5 col-span-2">
-                <span className="w-3 h-0.5 bg-[#F4B942] inline-block"></span>
-                <span>Corridor Ahead of Resident</span>
-              </div>
-            </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setLegendOpen(open => !open)}
+              aria-expanded={legendOpen}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border text-[11px] font-semibold shadow-sm transition-colors ${
+                isNight
+                  ? 'bg-[#142B4A]/90 border-slate-700 text-slate-200 hover:bg-[#142B4A]'
+                  : legendOpen
+                    ? 'bg-[#1F9D8B] border-[#1F9D8B] text-white'
+                    : 'bg-white/95 border-slate-200 text-slate-600 hover:border-[#1F9D8B]/50 hover:text-[#1F9D8B]'
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>Legend</span>
+              <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${legendOpen ? 'rotate-180' : ''}`} />
+            </button>
           </div>
         )}
 

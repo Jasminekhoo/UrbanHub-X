@@ -122,7 +122,7 @@ export const Header = () => {
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-xl font-bold tracking-tight text-slate-900 group-hover:text-livin-navy transition-colors">
-                  LIVIN<span className="text-livin-accent font-light">Care</span>
+                  UrbanHub-X
                 </span>
                 <span className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full ${
                   currentRole === 'admin' 

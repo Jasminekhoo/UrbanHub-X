@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNightSafe } from '../../context/NightSafeContext';
+import { GoogleMapsTownshipView } from '../../components/GoogleMapsTownshipView';
 import { 
   AlertTriangle, 
   MapPin, 
@@ -222,6 +223,20 @@ export function HazardReportView() {
                           <div>Severity: <strong>{h.severity}</strong></div>
                           <div>Assigned Action: <strong>{h.pairedInterventionId ? `Package ${h.pairedInterventionId}` : 'Under Review'}</strong></div>
                         </div>
+
+                        {/* Map Geolocation */}
+                        <div className="h-28 w-full rounded-lg border border-slate-200 overflow-hidden relative mt-1.5 bg-slate-100">
+                          <GoogleMapsTownshipView
+                            theme="day"
+                            currentCheckpointNode={h.affectedNode || null}
+                            activeLamps={h.affectedNode ? [h.affectedNode] : []}
+                            hazards={[h]}
+                            height="100%"
+                            showOverlayLabels={false}
+                            showHeader={false}
+                          />
+                        </div>
+
                         <div className="text-[10px] text-slate-400 italic pt-1">
                           Updates sync dynamically with Property Management decisions.
                         </div>
@@ -406,6 +421,22 @@ export function HazardReportView() {
                 className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-[#2864A6]/20 focus:border-[#2864A6] transition"
               />
             )}
+
+            {/* Google Map Location Preview */}
+            <div className="h-32 w-full rounded-xl border border-slate-200 overflow-hidden relative mt-1.5 bg-slate-100">
+              <GoogleMapsTownshipView
+                theme="day"
+                currentCheckpointNode={affectedNode}
+                activeLamps={[affectedNode]}
+                height="100%"
+                showOverlayLabels={false}
+                showHeader={false}
+              />
+              <div className="absolute top-1.5 left-2 px-2 py-0.5 bg-white/90 backdrop-blur-sm rounded-md border border-slate-200 shadow-2xs flex items-center gap-1 z-10 pointer-events-none">
+                <MapPin className="w-2.5 h-2.5 text-[#2864A6]" />
+                <span className="text-[9px] font-bold text-slate-700">Location Preview ({affectedNode}) · Google Maps</span>
+              </div>
+            </div>
           </div>
 
           {/* Severity */}

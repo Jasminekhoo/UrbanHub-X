@@ -5,6 +5,7 @@ import { ResidentContainer } from './views/resident/ResidentContainer';
 import { SecurityDashboard } from './views/security/SecurityDashboard';
 import { PropertyDashboard } from './views/property/PropertyDashboard';
 import { Toast } from './components/Toast';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 export function App() {
   const { role } = useNightSafe();
@@ -14,11 +15,22 @@ export function App() {
       {/* Main Single App View based on active role */}
       <div className="flex-1 flex flex-col">
         {(role === 'select' || role === 'login') && <NightSafeLoginView />}
-        {role === 'resident' && <ResidentContainer />}
-        {role === 'security' && <SecurityDashboard />}
-        {role === 'property' && <PropertyDashboard />}
+        {role === 'resident' && (
+          <ErrorBoundary>
+            <ResidentContainer />
+          </ErrorBoundary>
+        )}
+        {role === 'security' && (
+          <ErrorBoundary>
+            <SecurityDashboard />
+          </ErrorBoundary>
+        )}
+        {role === 'property' && (
+          <ErrorBoundary>
+            <PropertyDashboard />
+          </ErrorBoundary>
+        )}
       </div>
-
 
       {/* Real-time Notification Toast */}
       <Toast />

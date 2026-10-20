@@ -1,7 +1,7 @@
 {
-  "name": "livin-care",
+  "name": "urbanhub-x",
   "version": "1.0.0",
-  "description": "LIVIN Care - Role-Based Resident & Admin Prototype for Sime Darby Property Hackathon",
+  "description": "UrbanHub-X - Role-Based Resident & Admin Prototype for Sime Darby Property Hackathon",
   "type": "module",
   "scripts": {
     "dev": "vite",

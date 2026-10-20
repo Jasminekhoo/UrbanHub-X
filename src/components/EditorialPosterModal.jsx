@@ -7,7 +7,7 @@ export const EditorialPosterModal = () => {
 
   const [motionField, setMotionField] = useState('vertical-drop'); // vertical-drop, ascending-line, directional-flow, outward-radial, ripple-waves
   const [accentColor, setAccentColor] = useState('#214B74'); // SDP Navy, Forest Olive, Terracotta
-  const [title, setTitle] = useState('LIVIN CARE // ASTER');
+  const [title, setTitle] = useState('URBANHUB-X // ASTER');
   const [isCopied, setIsCopied] = useState(false);
 
   if (!isPosterOpen) return null;

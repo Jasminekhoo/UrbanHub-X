@@ -16,7 +16,6 @@ export function GlobalTopBar() {
     navigateRole, 
     resetDemoScenario, 
     alerts, 
-    heldBrightNode
   } = useNightSafe();
 
   const activeAlertCount = alerts.filter(a => a.status !== 'Resolved — demo').length;
@@ -101,18 +100,7 @@ export function GlobalTopBar() {
         </div>
       </div>
 
-      {/* Held bright banner if duress is triggered */}
-      {heldBrightNode && (
-        <div className="bg-[#F4B942] text-slate-950 px-4 py-1 text-xs font-semibold flex items-center justify-between border-t border-amber-500">
-          <div className="flex items-center gap-2 max-w-7xl mx-auto w-full">
-            <span className="w-2 h-2 rounded-full bg-red-600 animate-ping"></span>
-            <span>Simulated Smart Lighting Alert: Route luminaires around {heldBrightNode} held at maximum brightness.</span>
-            <span className="text-[11px] opacity-80 underline cursor-pointer ml-auto" onClick={() => navigateRole('security')}>
-              View on Security Console →
-            </span>
-          </div>
-        </div>
-      )}
+    
     </header>
   );
 }

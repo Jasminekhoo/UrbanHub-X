@@ -78,7 +78,7 @@ export const AppProvider = ({ children }) => {
       {
         id: 'notif-2',
         title: 'Welcome to Aster Residence',
-        message: 'LIVIN Care proactive community safety & family care system is active.',
+        message: 'UrbanHub-X proactive community safety & family care system is active.',
         timestamp: '17 Oct, 08:00 AM',
         unread: false,
         type: 'system'

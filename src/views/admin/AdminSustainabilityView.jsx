@@ -84,7 +84,7 @@ export const AdminSustainabilityView = () => {
           Inclusive Design Without Mandatory Smartphone Ownership
         </h3>
         <p className="text-slate-600 leading-relaxed">
-          The central innovation of LIVIN Care is connecting elderly residents (via physical Home Console buttons), children (via NFC keyfobs), and OKU residents directly to security and concierge staff without requiring every resident to own or navigate a complicated smartphone app.
+          The central innovation of UrbanHub-X is connecting elderly residents (via physical Home Console buttons), children (via NFC keyfobs), and OKU residents directly to security and concierge staff without requiring every resident to own or navigate a complicated smartphone app.
         </p>
       </div>
     </div>

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { loadGoogleMapsScript } from '../utils/googleMapsLoader';
+import { loadGoogleMapsScript, resetGoogleMapsLoader } from '../utils/googleMapsLoader';
 import { ELMINA_CENTER, NODE_COORDINATES, ROUTE_GPS_PATHS, HAZARD_COORDINATES } from '../data/elminaGeoData';
 import { SchematicTownshipMap } from './SchematicTownshipMap';
 
@@ -7,9 +7,9 @@ export function GoogleMapsTownshipView({
   theme = 'day',
   selectedRoute = 'A',
   activeLamps = [],
-  heldBrightNode = null,
   currentCheckpointNode = null,
   hazards = [],
+  onSelectHazard = null,
   alerts = [],
   height = '100%',
   showHeader = false,
@@ -36,17 +36,28 @@ export function GoogleMapsTownshipView({
       return;
     }
 
+    let cancelled = false;
     setLoadState('loading');
 
-    loadGoogleMapsScript(apiKey)
+    // onAuthFailure: called by googleMapsLoader when gm_authFailure fires.
+    // This can happen before OR after the script's onload — the loader handles
+    // both orderings, so we just need to react here.
+    const handleAuthFailure = () => {
+      if (!cancelled) setLoadState('error');
+    };
+
+    loadGoogleMapsScript(apiKey, handleAuthFailure)
       .then(() => {
-        // Just mark as loaded — initMap runs in the next effect
-        setLoadState('loaded');
+        if (!cancelled) setLoadState('loaded');
       })
       .catch((err) => {
-        console.warn('Google Maps loading fallback to schematic:', err);
-        setLoadState('error');
+        if (!cancelled) {
+          console.warn('[GoogleMapsTownshipView] Maps load failed — using schematic fallback:', err?.message || err);
+          setLoadState('error');
+        }
       });
+
+    return () => { cancelled = true; };
   }, [apiKey]);
 
   // ── Step 2: Init map once script is loaded AND div is in the DOM ───────────
@@ -86,16 +97,26 @@ export function GoogleMapsTownshipView({
       { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#023e58' }] },
     ];
 
-    const map = new maps.Map(mapContainerRef.current, {
-      center: ELMINA_CENTER,
-      zoom: 15.5,
-      mapTypeId: 'roadmap',
-      disableDefaultUI: true,
-      zoomControl: true,
-      zoomControlOptions: { position: maps.ControlPosition.RIGHT_CENTER },
-      fullscreenControl: false,
-      styles: isDark ? darkStyle : lightStyle,
-    });
+    // Guard: gm_authFailure may have fired between state update and this effect.
+    // Constructing a Map with an invalid auth throws synchronously and would
+    // propagate as an unhandled React render error — catch it and fall back.
+    let map;
+    try {
+      map = new maps.Map(mapContainerRef.current, {
+        center: ELMINA_CENTER,
+        zoom: 15.5,
+        mapTypeId: 'roadmap',
+        disableDefaultUI: true,
+        zoomControl: true,
+        zoomControlOptions: { position: maps.ControlPosition.RIGHT_CENTER },
+        fullscreenControl: false,
+        styles: isDark ? darkStyle : lightStyle,
+      });
+    } catch (initErr) {
+      console.warn('[GoogleMapsTownshipView] Map init failed — falling back to schematic:', initErr?.message || initErr);
+      setLoadState('error');
+      return;
+    }
 
     mapInstanceRef.current = map;
     renderOverlays(maps, map);
@@ -202,18 +223,17 @@ export function GoogleMapsTownshipView({
     Object.entries(NODE_COORDINATES).forEach(([nodeId, pos]) => {
       const isCurrent = currentCheckpointNode === nodeId;
       const isLit = activeLamps.includes(nodeId);
-      const isHeld = heldBrightNode === nodeId;
 
-      if (isLit || isHeld) {
+      if (isLit) {
         const circle = new maps.Circle({
           strokeColor: '#f59e0b',
           strokeOpacity: 0.8,
-          strokeWeight: isHeld ? 3 : 1.5,
+          strokeWeight: 1.5,
           fillColor: '#fef08a',
-          fillOpacity: isHeld ? 0.45 : 0.25,
+          fillOpacity: 0.25,
           map,
           center: pos,
-          radius: isHeld ? 65 : 45,
+          radius: 45,
           zIndex: 5,
         });
         circlesRef.current.push(circle);
@@ -255,6 +275,9 @@ export function GoogleMapsTownshipView({
           strokeWeight: 1.5,
         },
       });
+      if (onSelectHazard) {
+        marker.addListener('click', () => onSelectHazard(h));
+      }
       markersRef.current.push(marker);
     });
   };
@@ -264,7 +287,7 @@ export function GoogleMapsTownshipView({
     if (loadState === 'loaded' && window.google?.maps && mapInstanceRef.current) {
       renderOverlays(window.google.maps, mapInstanceRef.current);
     }
-  }, [selectedRoute, activeLamps, heldBrightNode, currentCheckpointNode, hazards, fromPin, toPin]);
+  }, [selectedRoute, activeLamps, currentCheckpointNode, hazards, onSelectHazard, fromPin, toPin]);
 
   // ── Render ─────────────────────────────────────────────────────────────────
   // Always render the map container div so mapContainerRef.current is available.
@@ -278,15 +301,33 @@ export function GoogleMapsTownshipView({
           theme={theme}
           selectedRoute={selectedRoute}
           activeLamps={activeLamps}
-          heldBrightNode={heldBrightNode}
           currentCheckpointNode={currentCheckpointNode}
           hazards={hazards}
           alerts={alerts}
+          onSelectHazard={onSelectHazard}
           height={height}
           showLegend={false}
           showOverlayLabels={showOverlayLabels}
           showHeader={showHeader}
         />
+        {loadState === 'error' && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              resetGoogleMapsLoader();
+              setLoadState('loading');
+              loadGoogleMapsScript(apiKey, () => setLoadState('error'))
+                .then(() => setLoadState('loaded'))
+                .catch(() => setLoadState('error'));
+            }}
+            className="absolute top-2 right-2 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-600/95 hover:bg-amber-700 active:scale-95 text-white text-[10px] font-semibold shadow-md backdrop-blur-sm transition-all cursor-pointer"
+            title="Click to retry connecting to Google Maps"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-200 animate-pulse" />
+            <span>Google Maps: Pending Cloud Activation · Click to Retry</span>
+          </button>
+        )}
       </div>
     );
   }
@@ -297,7 +338,7 @@ export function GoogleMapsTownshipView({
       <div
         ref={mapContainerRef}
         className="w-full h-full"
-        style={{ minHeight: '300px' }}
+        style={{ height, minHeight: '300px' }}
       />
 
       {/* Loading shimmer overlay — sits on top until map tiles load */}

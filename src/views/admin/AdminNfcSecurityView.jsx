@@ -35,7 +35,7 @@ export const AdminNfcSecurityView = () => {
         <Info className="w-4 h-4 text-slate-500 flex-shrink-0 mt-0.5" />
         <div className="leading-relaxed">
           <span className="font-bold text-slate-800 block">Encrypted Token Architecture</span>
-          LIVIN Care handles card events using unique cryptographic tokens (e.g. <code>TK-8821-99B4</code>). <strong>Raw identity cards (IC numbers), biometric patterns, or health records are never linked to NFC tokens.</strong>
+          UrbanHub-X handles card events using unique cryptographic tokens (e.g. <code>TK-8821-99B4</code>). <strong>Raw identity cards (IC numbers), biometric patterns, or health records are never linked to NFC tokens.</strong>
         </div>
       </div>
 

@@ -278,7 +278,7 @@ export const ResidentLayout = ({ children }) => {
                     <Building2 className="w-5 h-5 text-sky-200" />
                   </div>
                   <div>
-                    <span className="font-extrabold text-slate-900 text-sm block">LIVIN Care</span>
+                    <span className="font-extrabold text-slate-900 text-sm block">UrbanHub-X</span>
                     <span className="text-[10px] font-mono text-slate-400">Resident Portal</span>
                   </div>
                 </div>

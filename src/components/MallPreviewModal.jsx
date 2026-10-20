@@ -60,7 +60,7 @@ export const MallPreviewModal = () => {
           <Info className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
           <div>
             <span className="font-bold block">Secondary Focus Concept Only (Section 7)</span>
-            Demonstrates extending LIVIN Care's proactive accessibility framework to Sime Darby Property retail assets. Detailed demo storylines remain focused on residential communities.
+            Demonstrates extending UrbanHub-X's proactive accessibility framework to Sime Darby Property retail assets. Detailed demo storylines remain focused on residential communities.
           </div>
         </div>
 

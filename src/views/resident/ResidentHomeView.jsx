@@ -14,7 +14,9 @@ import {
   X,
   SlidersHorizontal,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Flame,
+  Sparkles
 } from 'lucide-react';
 import { getHazardImage } from '../../assets/hazardImages';
 
@@ -44,19 +46,13 @@ export function ResidentHomeView() {
   };
 
   const getAuthorDisplay = (item) => {
-    if (item.reportedBy && item.reportedBy !== 'Resident' && item.reportedBy !== 'Landscape Inspector') {
-      return item.reportedBy;
-    }
-    if (item.id === 'HZ-103') return 'Alex Chen (Resident)';
-    if (item.id === 'HZ-102') return 'Anonymous Resident';
-    if (item.id === 'HZ-101') return 'Aina (Resident)';
-    return 'Anonymous Resident';
+    return item.reportedBy || 'Resident';
   };
 
-  // Only 3 feed categories as requested
-  const categories = ['All', 'Damaged Path', 'Overgrown Vege', 'Light Broken'];
+  // 3 feed categories matching Property Street Condition
+  const categories = ['All', 'Light Broken', 'Damaged Path', 'Overgrown Vege'];
 
-  // Identify and filter feeds strictly to the 3 canonical categories
+  // Identify and filter feeds across the 3 canonical categories
   const canonicalFeeds = hazards.filter(h => {
     const text = ((h.category || '') + ' ' + (h.title || '') + ' ' + (h.feedCategory || '') + ' ' + h.id).toLowerCase();
     return (
@@ -66,36 +62,50 @@ export function ResidentHomeView() {
       text.includes('sightline') ||
       text.includes('light') ||
       text.includes('lamp') ||
-      ['hz-101', 'hz-102', 'hz-103'].includes(h.id?.toLowerCase())
+      ['hz-101', 'hz-102', 'hz-103', 'hz-104', 'hz-105', 'hz-106', 'hz-107'].includes(h.id?.toLowerCase())
     );
   });
 
-  // Sort canonical feeds so the order matches: Damaged Path, Overgrown Vege, Light Broken
+  // Grouped sort to align with Property Street Condition:
+  // 1. Streetlight Condition ('Light Broken')
+  // 2. Ground Condition ('Damaged Path')
+  // 3. Overgrown Vegetation ('Overgrown Vege')
   const sortedFeeds = [...canonicalFeeds].sort((a, b) => {
     const orderScore = (item) => {
       const name = getCleanCategoryName(item);
-      if (name === 'Damaged Path' || item.id === 'HZ-103') return 1;
-      if (name === 'Overgrown Vege' || item.id === 'HZ-102') return 2;
-      if (name === 'Light Broken' || item.id === 'HZ-101') return 3;
+      if (name === 'Light Broken') return 1;
+      if (name === 'Damaged Path') return 2;
+      if (name === 'Overgrown Vege') return 3;
       return 4;
     };
-    return orderScore(a) - orderScore(b);
+    if (orderScore(a) !== orderScore(b)) {
+      return orderScore(a) - orderScore(b);
+    }
+    return (a.id || '').localeCompare(b.id || '');
   });
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterModalOpen, setFilterModalOpen] = useState(false);
 
-  // Filters: area, severity, date
+  // Filters: area, sortOrder ('latest' | 'hottest'), date
   const [selectedArea, setSelectedArea] = useState('All');
-  const [selectedSeverity, setSelectedSeverity] = useState('All');
+  const [sortOrder, setSortOrder] = useState('latest'); // 'latest' | 'hottest'
   const [selectedDate, setSelectedDate] = useState(null); // 'YYYY-MM-DD' or null
   
   // Calendar month/year navigation state (defaults to October 2026 for demo data)
   const [calYear, setCalYear] = useState(2026);
   const [calMonth, setCalMonth] = useState(9); // 0-indexed: 9 = October
 
-  const areas = ['All', 'Garden Shortcut', 'Central Boulevard'];
-  const severities = ['All', 'High', 'Medium'];
+  // Derive distinct locations dynamically from hazards data + approved township areas
+  const areas = [
+    'All',
+    'Garden Shortcut',
+    'Central Boulevard',
+    'North Avenue Crossing',
+    'Courtyard Link',
+    'Courtyard Inner Perimeter',
+    'Transit Connector Hub'
+  ];
 
   // Helper to convert reportDate (e.g. "18 Oct 2026") to YYYY-MM-DD
   const parseReportDate = (str = '') => {
@@ -118,12 +128,12 @@ export function ResidentHomeView() {
   };
 
   const activeFiltersCount = (selectedArea !== 'All' ? 1 : 0) +
-    (selectedSeverity !== 'All' ? 1 : 0) +
+    (sortOrder !== 'latest' ? 1 : 0) +
     (selectedDate ? 1 : 0);
 
   const resetFilters = () => {
     setSelectedArea('All');
-    setSelectedSeverity('All');
+    setSortOrder('latest');
     setSelectedDate(null);
   };
 
@@ -143,11 +153,6 @@ export function ResidentHomeView() {
       if (!((h.location || '').toLowerCase().includes(selectedArea.toLowerCase()))) return false;
     }
 
-    // Severity filter
-    if (selectedSeverity !== 'All') {
-      if ((h.severity || '').toLowerCase() !== selectedSeverity.toLowerCase()) return false;
-    }
-
     // Date filter (calendar date matching)
     if (selectedDate) {
       const hDateIso = parseReportDate(h.reportDate);
@@ -155,6 +160,18 @@ export function ResidentHomeView() {
     }
 
     return true;
+  }).sort((a, b) => {
+    if (sortOrder === 'hottest') {
+      const countA = upvotes[a.id] || 0;
+      const countB = upvotes[b.id] || 0;
+      if (countB !== countA) return countB - countA;
+    } else {
+      // 'latest': sort by reportDate / timestamp descending
+      const dateA = parseReportDate(a.reportDate) || '';
+      const dateB = parseReportDate(b.reportDate) || '';
+      if (dateB !== dateA) return dateB.localeCompare(dateA);
+    }
+    return 0;
   });
 
   return (
@@ -212,9 +229,9 @@ export function ResidentHomeView() {
                 Area: {selectedArea}
               </span>
             )}
-            {selectedSeverity !== 'All' && (
+            {sortOrder !== 'latest' && (
               <span className="px-2 py-0.5 rounded bg-white border border-sky-200 text-slate-700">
-                Severity: {selectedSeverity}
+                Sort: Hottest
               </span>
             )}
             {selectedDate && (
@@ -283,29 +300,33 @@ export function ResidentHomeView() {
                 </div>
               </div>
 
-              {/* Filter 2: Severity */}
+              {/* Filter 2: Sort by Latest / Hottest */}
               <div>
                 <label className="flex items-center gap-1.5 text-xs font-bold text-slate-700 mb-2">
-                  <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
-                  <span>Severity Level</span>
+                  <Flame className="w-3.5 h-3.5 text-amber-500" />
+                  <span>Sort By</span>
                 </label>
                 <div className="flex flex-wrap gap-1.5">
-                  {severities.map(sev => (
-                    <button
-                      key={sev}
-                      onClick={() => setSelectedSeverity(sev)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${selectedSeverity === sev
-                          ? sev === 'High'
-                            ? 'bg-rose-600 text-white shadow-xs'
-                            : sev === 'Medium'
-                              ? 'bg-amber-500 text-white shadow-xs'
-                              : 'bg-[#2864A6] text-white shadow-xs'
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                        }`}
-                    >
-                      {sev === 'All' ? 'All Severities' : `${sev} Severity`}
-                    </button>
-                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setSortOrder('latest')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${sortOrder === 'latest'
+                        ? 'bg-[#2864A6] text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                  >
+                    Latest
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSortOrder('hottest')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${sortOrder === 'hottest'
+                        ? 'bg-[#2864A6] text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                  >
+                    Hottest
+                  </button>
                 </div>
               </div>
 
@@ -481,7 +502,7 @@ export function ResidentHomeView() {
           const authorName = getAuthorDisplay(item);
           const isAnonymous = authorName.toLowerCase().includes('anonymous');
           const cleanTime = (item.timestamp || '').replace(/·.*$/g, '').trim();
-          const imgSrc = getHazardImage(item) || item.figureUrl;
+          const imgSrc = item.figureUrl || getHazardImage(item);
 
           return (
             <div
@@ -502,29 +523,20 @@ export function ResidentHomeView() {
                     }
                   }}
                 />
-
-                {/* Severity Badge overlay on photo */}
-                <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
-                  <span className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold shadow-md backdrop-blur-md border ${item.severity === 'High'
-                      ? 'bg-red-600/90 text-white border-red-300/40'
-                      : item.severity === 'Medium'
-                        ? 'bg-amber-500/90 text-white border-amber-300/40'
-                        : 'bg-emerald-600/90 text-white border-emerald-300/40'
-                    }`}>
-                    <AlertTriangle className="w-3.5 h-3.5" />
-                    <span>{item.severity || 'Medium'} Severity</span>
-                  </span>
-                </div>
-
               </div>
 
               {/* Caption strip */}
               <div className="px-4 py-2 bg-slate-50 border-b border-slate-100 flex items-center justify-between gap-2">
                 <div className="flex items-center gap-1.5 min-w-0">
                   <Camera className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                  <p className="text-[11px] text-slate-600 italic truncate">{item.figureCaption}</p>
+                  <p className="text-[11px] text-slate-600 italic truncate">{item.figureCaption || item.title}</p>
                 </div>
-                <span className="text-[10px] font-mono text-slate-400 shrink-0">{item.id}</span>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-white text-slate-700 border border-slate-200">
+                    {item.feedCategory || item.category}
+                  </span>
+                  <span className="text-[10px] font-mono text-slate-400 font-bold">{item.id}</span>
+                </div>
               </div>
 
               {/* Card Body */}

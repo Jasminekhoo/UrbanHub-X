@@ -95,7 +95,7 @@ export const LoginView = () => {
               <Building2 className="w-8 h-8 text-sky-200" />
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-              LIVIN<span className="text-livin-accent font-light">Care</span>
+              UrbanHub-X
             </h1>
             <p className="mt-2 text-sm text-slate-700 font-bold">
               “{PRODUCT_INFO.tagline}”
@@ -224,7 +224,7 @@ export const LoginView = () => {
       </div>
 
       <footer className="py-4 text-center text-slate-400 text-[11px]">
-        LIVIN Care 2.0 &copy; 2026 Sime Darby Property Hackathon. All rights reserved.
+        UrbanHub-X 2.0 &copy; 2026 Sime Darby Property Hackathon. All rights reserved.
       </footer>
     </div>
   );

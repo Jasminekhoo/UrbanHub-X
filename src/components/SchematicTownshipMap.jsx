@@ -6,7 +6,6 @@ export function SchematicTownshipMap({
   theme = 'day', // 'day' | 'night'
   selectedRoute = null, // 'A' | 'B' | null
   activeLamps = [], // array of node IDs that are currently glowing
-  heldBrightNode = null, // e.g. 'L-07' if emergency held
   currentCheckpointNode = null, // e.g. 'L-03'
   hazards = [],
   alerts = [],
@@ -53,12 +52,6 @@ export function SchematicTownshipMap({
             </span>
           </div>
           <div className="flex items-center gap-3">
-            {heldBrightNode && (
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-400 bg-amber-950/40 px-2 py-0.5 rounded border border-amber-600/40">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping"></span>
-                Lights Held Bright: {heldBrightNode}
-              </span>
-            )}
             <span className="text-[11px] text-slate-400">Scale: Fictional Prototype</span>
           </div>
         </div>
@@ -228,25 +221,7 @@ export function SchematicTownshipMap({
           <g>
             {SCHEMATIC_NODES.map((node) => {
               const isActive = activeLamps.includes(node.id);
-              const isHeld = heldBrightNode === node.id;
               const isFault = hazards.some(h => h.affectedNode === node.id && h.status !== 'Resolved');
-
-              if (isHeld) {
-                return (
-                  <circle
-                    key={`halo-${node.id}`}
-                    cx={node.x}
-                    cy={node.y}
-                    r="46"
-                    fill="rgba(244, 185, 66, 0.25)"
-                    stroke="rgba(244, 185, 66, 0.8)"
-                    strokeWidth="2"
-                    strokeDasharray="4 3"
-                    filter="url(#amber-glow)"
-                    className="animate-pulse"
-                  />
-                );
-              }
 
               if (isActive) {
                 return (
@@ -269,17 +244,13 @@ export function SchematicTownshipMap({
           <g>
             {SCHEMATIC_NODES.map((node) => {
               const isActive = activeLamps.includes(node.id);
-              const isHeld = heldBrightNode === node.id;
               const isCurrent = currentCheckpointNode === node.id;
               const hasFault = hazards.some(h => h.affectedNode === node.id && h.status !== 'Resolved');
 
               let nodeColor = isNight ? '#334155' : '#cbd5e1';
               let ringColor = isNight ? '#64748b' : '#94a3b8';
 
-              if (isHeld) {
-                nodeColor = '#F4B942';
-                ringColor = '#C83E4D';
-              } else if (isActive) {
+              if (isActive) {
                 nodeColor = '#F4B942';
                 ringColor = '#142B4A';
               } else if (hasFault) {
@@ -297,10 +268,10 @@ export function SchematicTownshipMap({
                   <circle
                     cx={node.x}
                     cy={node.y}
-                    r={isHeld ? 16 : (isActive || isCurrent ? 14 : 11)}
-                    fill={isHeld ? '#F4B942' : (isActive ? '#F4B942' : (isNight ? '#1e293b' : '#ffffff'))}
+                    r={isActive || isCurrent ? 14 : 11}
+                    fill={isActive ? '#F4B942' : (isNight ? '#1e293b' : '#ffffff')}
                     stroke={ringColor}
-                    strokeWidth={isHeld || isCurrent ? 3 : 2}
+                    strokeWidth={isCurrent ? 3 : 2}
                     className="transition-all duration-300"
                   />
 
@@ -308,8 +279,8 @@ export function SchematicTownshipMap({
                   <circle
                     cx={node.x}
                     cy={node.y}
-                    r={isHeld ? 7 : (isActive ? 6 : 4)}
-                    fill={isHeld ? '#142B4A' : (isActive ? '#142B4A' : (hasFault ? '#d97706' : (isNight ? '#64748b' : '#475569')))}
+                    r={isActive ? 6 : 4}
+                    fill={isActive ? '#142B4A' : (hasFault ? '#d97706' : (isNight ? '#64748b' : '#475569'))}
                   />
 
                   {/* Node ID label */}
@@ -470,7 +441,7 @@ export function SchematicTownshipMap({
                 <div className="grid grid-cols-2 gap-x-4 gap-y-1">
                   <div className="flex items-center gap-1.5">
                     <span className="w-2.5 h-2.5 rounded-full bg-[#F4B942] inline-block shadow-sm"></span>
-                    <span>Active Smart Light</span>
+                    <span>Streetlight: Normal</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <span className="w-2.5 h-2.5 rounded-full bg-slate-400 inline-block"></span>
@@ -486,7 +457,7 @@ export function SchematicTownshipMap({
                   </div>
                   <div className="flex items-center gap-1.5 col-span-2">
                     <span className="w-3 h-0.5 bg-[#F4B942] inline-block"></span>
-                    <span>Corridor Ahead of Resident</span>
+                    <span>Selected Route</span>
                   </div>
                 </div>
               </div>

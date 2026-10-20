@@ -61,7 +61,7 @@ export function WelcomeView() {
             </div>
             <h3 className="font-semibold text-sm text-white">1. Informed Night Routes</h3>
             <p className="text-xs text-slate-300 leading-relaxed">
-              Compare paths by lighting and obstruction penalties. Trigger simulated smart-light corridors ahead of your walk.
+              Compare paths by lighting condition and obstruction penalties to choose the safest route.
             </p>
           </div>
 
@@ -71,7 +71,7 @@ export function WelcomeView() {
             </div>
             <h3 className="font-semibold text-sm text-white">2. Discreet Duress & SOS</h3>
             <p className="text-xs text-slate-300 leading-relaxed">
-              Quietly notify on-duty security using a preconfigured Duress PIN without theatrical screens. Surrounding lamps hold bright.
+              Quietly notify on-duty security using a preconfigured Duress PIN without theatrical screens.
             </p>
           </div>
 
@@ -106,7 +106,7 @@ export function WelcomeView() {
                   Resident App
                 </h4>
                 <p className="text-xs text-slate-300">
-                  Mobile experience for Aina. Route comparison, smart-light preview, Duress PIN, and hazard reporting.
+                  Mobile experience for Aina. Route comparison, journey preview, Duress PIN, and hazard reporting.
                 </p>
               </div>
               <div className="mt-4 flex items-center justify-between text-xs font-semibold text-sky-400 group-hover:text-amber-300 pt-3 border-t border-slate-800">

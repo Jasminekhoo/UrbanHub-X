@@ -25,7 +25,6 @@ export function JourneyPreviewView() {
     endJourney,
     checkpointIndex, 
     activeLamps, 
-    heldBrightNode,
     hazards, 
     alerts,
     setResidentTab,
@@ -43,12 +42,8 @@ export function JourneyPreviewView() {
   const remainingMinutes = Math.max(1, Math.round(route.durationMinutes * (1 - progressRatio * 0.8)));
   const remainingDistanceKm = Math.max(0.05, (route.distanceMeters * (1 - progressRatio * 0.85) / 1000)).toFixed(2);
   
-  // Active lighting calculation
-  const isCorridorActive = activeLamps.length > 0;
-  const routeLampsCount = route.nodes.filter(n => activeLamps.includes(n)).length;
-  const lightingPercentage = isCorridorActive 
-    ? Math.min(100, Math.round((routeLampsCount / totalNodes) * 100) + 40)
-    : (selectedRouteId === 'A' ? 94 : selectedRouteId === 'B' ? 58 : 78);
+  // Static lighting coverage per route (infrastructure condition, not adaptive)
+  const lightingPercentage = selectedRouteId === 'A' ? 94 : selectedRouteId === 'B' ? 58 : 78;
 
   // Hazards / Danger on this route
   const routeHazards = hazards.filter(h => 
@@ -101,7 +96,6 @@ export function JourneyPreviewView() {
           theme="day"
           selectedRoute={selectedRouteId}
           activeLamps={activeLamps}
-          heldBrightNode={heldBrightNode}
           currentCheckpointNode={currentNodeId}
           hazards={hazards}
           alerts={alerts}
@@ -219,7 +213,7 @@ export function JourneyPreviewView() {
             </div>
 
             <p className="text-xs text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-100 leading-relaxed font-medium">
-              &ldquo;Forward luminaires illuminated ahead. Everything looking fine on your journey?&rdquo;
+              &ldquo;You have arrived at checkpoint {currentNodeId}. Everything looking fine on your journey?&rdquo;
             </p>
 
             <div className="space-y-2 pt-1">

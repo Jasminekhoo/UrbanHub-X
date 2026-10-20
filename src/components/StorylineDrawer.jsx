@@ -144,7 +144,7 @@ export function StorylineDrawer() {
       closingLine: "Closing pitch: 'NightSafe Loop connects better-informed night journeys with discreet assistance and evidence-based property improvements. Our prototype demonstrates the workflow with simulated data; the next step is validating the assumptions, operational fit, and integration feasibility with the property team.'",
       actionLabel: "View Route Impact & Close Pitch",
       onAction: () => {
-        navigateRole('property', 'route-impact');
+        navigateRole('property', 'budget');
       }
     }
   ];

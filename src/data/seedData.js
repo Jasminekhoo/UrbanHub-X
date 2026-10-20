@@ -1,8 +1,8 @@
 export const PRODUCT_INFO = {
-  name: 'LIVIN Care',
+  name: 'UrbanHub-X',
   tagline: 'Care that responds. A community that includes everyone.',
   track: 'Sime Darby Property Hackathon — People Track',
-  mission: 'LIVIN Care helps a residential community respond to residents who need support—including elderly people, children, and OKU residents—without making smartphone ownership a requirement.'
+  mission: 'UrbanHub-X helps a residential community respond to residents who need support—including elderly people, children, and OKU residents—without making smartphone ownership a requirement.'
 };
 
 export const DEMO_ACCOUNTS = {

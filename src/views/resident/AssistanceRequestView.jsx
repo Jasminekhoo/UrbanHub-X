@@ -233,7 +233,7 @@ export const AssistanceRequestView = () => {
           <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 text-[11px] text-slate-500 flex items-start gap-2">
             <Info className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" />
             <span>
-              LIVIN Care collects only the minimal information required to dispatch assistance. No invasive personal data is stored.
+              UrbanHub-X collects only the minimal information required to dispatch assistance. No invasive personal data is stored.
             </span>
           </div>
 

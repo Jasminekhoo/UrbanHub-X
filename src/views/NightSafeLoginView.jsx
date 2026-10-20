@@ -15,7 +15,7 @@ const ROLES = [
     id: 'resident',
     title: 'Resident',
     subtitle: 'Citizen App',
-    email: 'resident@urbanx.demo',
+    email: 'resident@urbanhubx.demo',
     password: 'Resident2026!',
     tab: 'home',
     icon: Smartphone,
@@ -24,7 +24,7 @@ const ROLES = [
     id: 'security',
     title: 'Security',
     subtitle: 'Guard Ops',
-    email: 'security@urbanx.demo',
+    email: 'security@urbanhubx.demo',
     password: 'GuardOps2026!',
     tab: 'overview',
     icon: Shield,
@@ -33,7 +33,7 @@ const ROLES = [
     id: 'property',
     title: 'Property',
     subtitle: 'Township Admin',
-    email: 'property@urbanx.demo',
+    email: 'property@urbanhubx.demo',
     password: 'PropertyMgmt2026!',
     tab: 'overview',
     icon: Building2,
@@ -44,7 +44,7 @@ export function NightSafeLoginView() {
   const { navigateRole, showToast } = useNightSafe();
 
   const [selectedRole, setSelectedRole] = useState('resident');
-  const [email, setEmail] = useState('resident@urbanx.demo');
+  const [email, setEmail] = useState('resident@urbanhubx.demo');
   const [password, setPassword] = useState('Resident2026!');
   const [error, setError] = useState('');
 
@@ -94,7 +94,7 @@ export function NightSafeLoginView() {
       <main className="max-w-md w-full mx-auto relative z-10">
         <div className="bg-[#0D1726]/90 backdrop-blur-xl border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
           
-          {/* Logo & Name as Urban-X */}
+          {/* Logo & Name as UrbanHub-X */}
           <div className="text-center space-y-3">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#1E3C66] via-[#2864A6] to-sky-400 p-[2px] shadow-xl shadow-sky-500/20">
               <div className="w-full h-full bg-[#0D1726] rounded-[14px] flex items-center justify-center">
@@ -114,7 +114,7 @@ export function NightSafeLoginView() {
               </div>
             </div>
             <h1 className="text-3xl font-black tracking-tight text-white">
-              Urban<span className="text-sky-400">-X</span>
+              UrbanHub<span className="text-sky-400">-X</span>
             </h1>
           </div>
 
@@ -180,7 +180,7 @@ export function NightSafeLoginView() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@urbanx.demo"
+                  placeholder="name@urbanhubx.demo"
                   required
                   className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700/80 text-white placeholder-slate-500 text-xs focus:outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400 transition"
                 />

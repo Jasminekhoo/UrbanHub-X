@@ -27,7 +27,6 @@ export function ResidentContainer() {
   const {
     residentTab,
     setResidentTab,
-    heldBrightNode,
     navigateRole,
     triggerSos,
     fallDetectionActive,
@@ -114,7 +113,7 @@ export function ResidentContainer() {
       <div className="w-full max-w-[400px] mb-2 px-2 flex items-center justify-between text-xs text-slate-400">
         <div className="flex items-center gap-1.5 font-semibold text-slate-300">
           <Smartphone className="w-3.5 h-3.5 text-sky-400" />
-          <span>Urban-X · Mobile App</span>
+          <span>UrbanHub-X · Mobile App</span>
         </div>
         <div className="flex items-center gap-2">
           {/* Walking Demo trigger */}
@@ -171,27 +170,13 @@ export function ResidentContainer() {
           }`}>
             <div className="flex flex-col items-center justify-center">
               <h1 className="text-base font-black tracking-[0.25em] text-white uppercase select-none">
-                Urban<span className="bg-gradient-to-r from-sky-400 via-sky-300 to-teal-300 bg-clip-text text-transparent">-X</span>
+                UrbanHub<span className="bg-gradient-to-r from-sky-400 via-sky-300 to-teal-300 bg-clip-text text-transparent">-X</span>
               </h1>
               <div className="w-5 h-[2px] rounded-full bg-gradient-to-r from-sky-500 to-teal-400 mt-0.5 opacity-80" />
             </div>
           </header>
 
-          {/* Alert Banner */}
-          {heldBrightNode && (
-            <div className="shrink-0 bg-[#F4B942] text-slate-950 px-3 py-1.5 text-[11px] font-bold flex items-center justify-between border-b border-amber-500 shadow-sm animate-pulse z-20">
-              <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-red-600 animate-ping" />
-                <span>Nearby lamps held bright near {heldBrightNode}</span>
-              </div>
-              <button
-                onClick={() => navigateRole('security', 'alert-detail')}
-                className="underline text-[10px] font-extrabold ml-1 hover:text-red-900"
-              >
-                View Console →
-              </button>
-            </div>
-          )}
+
 
           {/* Scrollable Content */}
           <div className={`flex-1 min-h-0 ${

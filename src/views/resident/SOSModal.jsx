@@ -23,7 +23,7 @@ const LIVE_UPDATES = [
   { delay: 0,    icon: '🔔', text: 'Alert received by Security Operations' },
   { delay: 2000, icon: '📍', text: 'Your location shared with duty officer' },
   { delay: 5000, icon: '🚔', text: 'Officer dispatched — en route to your location' },
-  { delay: 9000, icon: '💡', text: 'Nearby pathway lights held at full brightness' },
+  { delay: 9000, icon: '🛡️', text: 'Security team monitoring your location' },
 ];
 
 // ── Web Audio siren ──────────────────────────────────────────────────────────

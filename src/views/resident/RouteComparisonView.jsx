@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNightSafe } from '../../context/NightSafeContext';
+import { GoogleMapsTownshipView } from '../../components/GoogleMapsTownshipView';
 import {
   Clock,
   Ruler,
@@ -78,7 +79,7 @@ const ROUTE_DATA = [
       { icon: Footprints,label: 'Walkway Condition', value: 'Paved & Wide',   status: 'good'    },
       { icon: AlertTriangle, label: 'Known Hazards', value: '1 minor',       status: 'caution' },
     ],
-    reason: 'Paved, well-lit boulevard with smart-lamp corridor. Minor streetlight fault near L-04 is noted.',
+    reason: 'Paved, well-lit boulevard. Minor streetlight fault near L-04 is noted.',
   },
   {
     id: 'B',
@@ -148,7 +149,7 @@ const safetyColor = (score) => {
 };
 
 export function RouteComparisonView() {
-  const { setResidentTab, selectedRouteId, setSelectedRouteId, routeCategory, setRouteCategory, startJourney } = useNightSafe();
+  const { setResidentTab, selectedRouteId, setSelectedRouteId, routeCategory, setRouteCategory, startJourney, activeLamps, hazards } = useNightSafe();
   
   // Initialize from context or routeId
   const [activeCategory, setActiveCategory] = useState(routeCategory || 'safest');
@@ -269,6 +270,25 @@ export function RouteComparisonView() {
             <span className="font-bold text-slate-800">{activeCategoryObj.label} Mode: </span>
             {activeCategoryObj.summary}
           </p>
+        </div>
+      </div>
+
+      {/* ── Route Google Maps Preview ────────────────────────────── */}
+      <div className="shrink-0 h-44 w-full border-b border-slate-200 relative overflow-hidden bg-slate-100">
+        <GoogleMapsTownshipView
+          theme="day"
+          selectedRoute={selected}
+          activeLamps={activeLamps}
+          hazards={hazards}
+          height="100%"
+          showOverlayLabels={false}
+          showHeader={false}
+        />
+        <div className="absolute top-2 left-2 px-2.5 py-1 bg-white/90 backdrop-blur-sm rounded-lg border border-slate-200 shadow-sm flex items-center gap-1.5 z-10 pointer-events-none">
+          <span className={`w-2 h-2 rounded-full ${
+            selected === 'A' ? 'bg-emerald-500' : selected === 'B' ? 'bg-amber-500' : 'bg-[#2864A6]'
+          }`} />
+          <span className="text-[10px] font-bold text-slate-800">Route {selected} Preview · Google Maps</span>
         </div>
       </div>
 

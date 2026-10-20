@@ -81,7 +81,7 @@ export const ResidentProfileView = () => {
             <EyeOff className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" />
             <div>
               <span className="font-semibold text-slate-900 block">No Continuous Location Tracking</span>
-              LIVIN Care operates purely on resident-initiated alerts. We never track your real-time GPS or in-home movement.
+              UrbanHub-X operates purely on resident-initiated alerts. We never track your real-time GPS or in-home movement.
             </div>
           </div>
 

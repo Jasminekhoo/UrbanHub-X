@@ -38,7 +38,7 @@ export const FamilyCareView = () => {
         <Lock className="w-4 h-4 text-slate-500 flex-shrink-0 mt-0.5" />
         <div className="leading-relaxed">
           <span className="font-bold block text-slate-800">Consent &amp; Privacy Architecture</span>
-          Access is strictly permission-based and can be revoked by the resident at any time. LIVIN Care <strong>never tracks real-time GPS locations or continuous biometric health data</strong>.
+          Access is strictly permission-based and can be revoked by the resident at any time. UrbanHub-X <strong>never tracks real-time GPS locations or continuous biometric health data</strong>.
         </div>
       </div>
 

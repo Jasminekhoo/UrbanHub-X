@@ -691,14 +691,14 @@ export function SettingsView() {
               </div>
               <div>
                 <h3 className="text-sm font-black tracking-tight text-slate-900">
-                  Urban<span className="text-sky-500">-X</span>
+                  UrbanHub<span className="text-sky-500">-X</span>
                 </h3>
                 <p className="text-[11px] text-slate-500">People Track · Safety & Inclusion</p>
               </div>
             </div>
 
             <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 text-xs text-slate-600 leading-relaxed space-y-1">
-              <p><strong>App:</strong> Urban-X Community & Safety</p>
+              <p><strong>App:</strong> UrbanHub-X Community & Safety</p>
               <p><strong>Version:</strong> 2.4.0 (Release 2026)</p>
               <p><strong>Track:</strong> People: Safety & Security, Getting Around</p>
             </div>

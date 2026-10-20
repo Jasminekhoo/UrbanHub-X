@@ -115,7 +115,7 @@ export function SafetyCentreView() {
               <span>Simulate Duress PIN Activation</span>
             </button>
             <p className="text-[10px] text-slate-400">
-              Triggers simulated alert AL-204 on Security Console and holds nearby lights bright.
+              Triggers simulated alert AL-204 on Security Console.
             </p>
           </div>
 
@@ -231,7 +231,7 @@ export function SafetyCentreView() {
               <div className="mt-2 p-3 rounded-lg bg-slate-50 border border-slate-200 text-[11px] text-slate-600 space-y-1.5 animate-fadeIn">
                 <p>• <strong>Discreet Trigger:</strong> When entered under duress, the resident phone pretends to unlock or show a normal screen.</p>
                 <p>• <strong>Zero Visible Sirens:</strong> No flashing screen or audible alarm sounds from the resident handset.</p>
-                <p>• <strong>Luminaire Hold-Bright:</strong> Nearby smart streetlight luminaires hold high illumination to aid visual orientation.</p>
+                <p>• <strong>Streetlight Infrastructure:</strong> Streetlights: Always on at normal brightness. Location is shared with security for rapid response.</p>
                 <p>• <strong>Verified Audit:</strong> The security console creates a high-priority incident with the last recorded sensor checkpoint.</p>
               </div>
             )}
@@ -291,7 +291,7 @@ export function SafetyCentreView() {
             <div className="font-semibold text-slate-800">Data Shared in Demo:</div>
             <div>• Last Recorded Location: Near Lamp L-04 (Boulevard Walkway)</div>
             <div>• Timestamp: Just now</div>
-            <div>• Resident Profile: Aina (Demo Resident)</div>
+            <div>• Resident Profile: Aina</div>
           </div>
 
           {/* Press and Hold to Trigger Simulation (Anti-accidental activation) */}

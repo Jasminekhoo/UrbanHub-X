@@ -125,6 +125,9 @@ export function NightSafeProvider({ children }) {
           ? {
               ...initH,
               ...existing,
+              status: initH.id === 'HZ-107' && existing.status === 'Scheduled'
+                ? initH.status
+                : existing.status || initH.status,
               figureUrl: initH.figureUrl,
               feedCategory: initH.feedCategory,
               assignedPath: initH.assignedPath || existing.assignedPath,
@@ -189,6 +192,20 @@ export function NightSafeProvider({ children }) {
   // Storyline Presenter Helper (Scenes 0 to 8)
   const [storylineStep, setStorylineStep] = useState(0);
   const [isStorylineDrawerOpen, setIsStorylineDrawerOpen] = useState(false);
+
+  useEffect(() => {
+    setHazards(currentHazards => {
+      const hasScheduledSeed = currentHazards.some(
+        hazard => hazard.id === 'HZ-107' && hazard.status === 'Scheduled'
+      );
+      if (!hasScheduledSeed) return currentHazards;
+      return currentHazards.map(hazard =>
+        hazard.id === 'HZ-107' && hazard.status === 'Scheduled'
+          ? { ...hazard, status: 'Resolved' }
+          : hazard
+      );
+    });
+  }, []);
 
   // Cross-tab / cross-window synchronization via storage events
   useEffect(() => {

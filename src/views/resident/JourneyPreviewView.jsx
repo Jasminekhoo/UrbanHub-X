@@ -104,6 +104,7 @@ export function JourneyPreviewView() {
           hazards={hazards}
           alerts={alerts}
           height="100%"
+          fillContainer
           showLegend={false}
           showOverlayLabels={true}
           showHeader={false}

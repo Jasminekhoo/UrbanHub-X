@@ -15,6 +15,7 @@ export function GoogleMapsTownshipView({
   height = '100%',
   showHeader = false,
   showOverlayLabels = true,
+  fillContainer = false,
   // Optional origin/destination pin lat/lng for NightPathView
   fromPin = null,  // { lat, lng, label }
   toPin = null,    // { lat, lng, label }
@@ -129,7 +130,16 @@ export function GoogleMapsTownshipView({
     mapInstanceRef.current = map;
     renderOverlays(maps, map);
 
+    const resizeObserver = new ResizeObserver(() => {
+      if (!mapInstanceRef.current) return;
+      maps.event.trigger(mapInstanceRef.current, 'resize');
+      const center = mapInstanceRef.current.getCenter();
+      if (center) mapInstanceRef.current.setCenter(center);
+    });
+    resizeObserver.observe(mapContainerRef.current);
+
     return () => {
+      resizeObserver.disconnect();
       clearMapObjects();
       mapInstanceRef.current = null;
     };
@@ -327,28 +337,11 @@ export function GoogleMapsTownshipView({
           alerts={alerts}
           onSelectHazard={onSelectHazard}
           height={height}
+          fillContainer={fillContainer}
           showLegend={false}
           showOverlayLabels={showOverlayLabels}
           showHeader={showHeader}
         />
-        {loadState === 'error' && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              resetGoogleMapsLoader();
-              setLoadState('loading');
-              loadGoogleMapsScript(apiKey, () => setLoadState('error'))
-                .then(() => setLoadState('loaded'))
-                .catch(() => setLoadState('error'));
-            }}
-            className="absolute top-2 right-2 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-600/95 hover:bg-amber-700 active:scale-95 text-white text-[10px] font-semibold shadow-md backdrop-blur-sm transition-all cursor-pointer"
-            title="Click to retry connecting to Google Maps"
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-200 animate-pulse" />
-            <span>Google Maps: Pending Cloud Activation · Click to Retry</span>
-          </button>
-        )}
       </div>
     );
   }

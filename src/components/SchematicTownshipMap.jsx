@@ -13,6 +13,7 @@ export function SchematicTownshipMap({
   onSelectHazard = null,
   interactive = true,
   height = '420px',
+  fillContainer = false,
   showLegend = true,
   showOverlayLabels = true,
   showHeader = true
@@ -40,7 +41,7 @@ export function SchematicTownshipMap({
   const emergencyAlert = alerts.find(a => a.status !== 'Resolved');
 
   return (
-    <div className={`relative rounded-xl overflow-hidden border ${isNight ? 'bg-[#0D1726] border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'} transition-colors duration-300 shadow-sm flex flex-col`}>
+    <div className={`relative rounded-xl overflow-hidden border ${isNight ? 'bg-[#0D1726] border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'} transition-colors duration-300 shadow-sm flex flex-col ${fillContainer ? 'h-full min-h-0' : ''}`}>
       {/* Map Header Bar */}
       {showHeader && (
         <div className={`px-4 py-2.5 border-b flex items-center justify-between text-xs font-medium ${isNight ? 'bg-[#142B4A]/60 border-slate-800 text-slate-300' : 'bg-white border-slate-200 text-slate-600'}`}>
@@ -58,7 +59,10 @@ export function SchematicTownshipMap({
       )}
 
       {/* SVG Canvas Area */}
-      <div className="relative w-full overflow-hidden" style={{ height }}>
+      <div
+        className={`relative w-full overflow-hidden ${fillContainer ? 'flex-1 min-h-0' : ''}`}
+        style={fillContainer ? undefined : { height }}
+      >
         <svg
           viewBox={`0 0 ${width} ${mapHeight}`}
           className="w-full h-full select-none"

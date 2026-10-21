@@ -357,7 +357,7 @@ export const INITIAL_HAZARDS = [
     pedestrianExposure: "Low",
     urgency: "Low",
     evidenceConfidence: "High",
-    status: "Scheduled",
+    status: "Resolved",
     reportDate: "20 Oct 2026",
     upvotes: 3,
     validatedBy: [],
@@ -500,8 +500,8 @@ export const INITIAL_ALERTS = [
     lastCheckpoint: "L-02  Â·  9:09 PM",
     alertReceived: "9:05 PM",
     locationFreshness: "Simulated checkpoint overdue  Â·  Prompt unconfirmed",
-    status: "Acknowledged",
-    notes: ["9:06 PM  â€”  Officer: Wellbeing callback attempted, pending resident reply."],
+    status: "Resolved",
+    notes: ["9:06 PM  â€”  Officer: Wellbeing callback confirmed resident safe; case closed."],
     category: "Checkpoint Overdue",
     timestamp: "9:05 PM",
     isDuress: false
@@ -731,4 +731,3 @@ export function calculateRouteCost(routeId, appliedInterventions = []) {
     delta: base.totalCost - total
   };
 }
-

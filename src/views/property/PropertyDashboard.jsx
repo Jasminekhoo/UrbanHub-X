@@ -235,17 +235,17 @@ export function PropertyDashboard() {
   };
 
   // Statistics
-  const openHazards = hazards.filter(h => h.status !== 'Resolved').length;
+  const openHazards = hazards.length;
   const highPriority = hazards.filter(h => h.severity === 'High' && h.status !== 'Resolved').length;
-  const awaitingVerification = hazards.filter(h => h.status === 'Reported' || h.status === 'Under verification' || h.status === 'Needs verification').length;
+  const awaitingVerification = hazards.filter(h => h.status === 'Under verification').length;
 
   // Consolidated summary-bar metrics (replaces the 5 standalone metric cards)
   const summaryMetrics = [
-    { label: 'Open Hazards', value: openHazards, hint: 'Lighting & Pathways', valueTone: 'text-slate-900', hintTone: 'text-slate-400' },
-    { label: 'High-Priority Items', value: highPriority, hint: 'Require Mitigation', valueTone: 'text-[#C83E4D]', hintTone: 'text-red-600' },
-    { label: 'Awaiting Verification', value: awaitingVerification, hint: 'Grounds Check Queue', valueTone: 'text-amber-600', hintTone: 'text-amber-600' },
-    { label: 'Illustrative Budget', value: `RM ${budget.toLocaleString()}`, hint: 'Default Allocation', valueTone: 'text-[#2864A6]', hintTone: 'text-sky-600' },
-    { label: 'Modelled Route Cost Î”C', value: planApplied ? `-${routeACost.delta} pts` : '0 pts', hint: planApplied ? 'Plan Applied to Simulation' : 'Pending Plan Application', valueTone: 'text-emerald-600', hintTone: 'text-emerald-600' }
+    { label: 'Open Hazards', value: openHazards, hint: '', valueTone: 'text-slate-900', hintTone: 'text-slate-400' },
+    { label: 'High-Priority Items', value: highPriority, valueTone: 'text-[#C83E4D]', hintTone: 'text-red-600' },
+    { label: 'Awaiting Verification', value: awaitingVerification, valueTone: 'text-amber-600', hintTone: 'text-amber-600' },
+    { label: 'Illustrative Budget', value: `RM ${budget.toLocaleString()}`, valueTone: 'text-[#2864A6]', hintTone: 'text-sky-600' },
+    { label: 'Modelled Route Cost Î”C', value: planApplied ? `-${routeACost.delta} pts` : '0 pts', valueTone: 'text-emerald-600', hintTone: 'text-emerald-600' }
   ];
 
   // Filtered reports
@@ -660,9 +660,11 @@ export function PropertyDashboard() {
                   <div className={`mt-1 text-xl font-black leading-none ${m.valueTone}`}>
                     {m.value}
                   </div>
-                  <div className={`mt-1.5 text-[11px] font-medium ${m.hintTone}`}>
-                    {m.hint}
-                  </div>
+                  {m.hint && (
+                    <div className={`mt-1.5 text-[11px] font-medium ${m.hintTone}`}>
+                      {m.hint}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -1801,9 +1803,10 @@ export function PropertyDashboard() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {hazards.filter(h => h.feedCategory === 'Light Broken').map(hz => {
                     const isResolved = hz.status === 'Resolved';
-                    const dotColor = isResolved ? 'bg-emerald-500' : hz.severity === 'High' ? 'bg-red-500' : 'bg-yellow-400';
-                    const cardBorder = isResolved ? 'border-emerald-200' : hz.severity === 'High' ? 'border-red-300' : 'border-yellow-300';
-                    const cardBg = isResolved ? 'bg-emerald-50/40' : hz.severity === 'High' ? 'bg-red-50/60' : 'bg-yellow-50/60';
+                    const isReported = hz.status === 'Reported';
+                    const dotColor = isResolved ? 'bg-emerald-500' : isReported ? 'bg-red-500' : 'bg-yellow-400';
+                    const cardBorder = isResolved ? 'border-emerald-200' : isReported ? 'border-red-300' : 'border-yellow-300';
+                    const cardBg = isResolved ? 'bg-emerald-50/40' : isReported ? 'bg-red-50/60' : 'bg-yellow-50/60';
                     return (
                       <div
                         key={hz.id}
@@ -1851,9 +1854,10 @@ export function PropertyDashboard() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                       {groundHazards.map(hz => {
                         const isResolved = hz.status === 'Resolved';
-                        const dotColor = isResolved ? 'bg-emerald-500' : hz.severity === 'High' ? 'bg-red-500' : 'bg-yellow-400';
-                        const cardBorder = isResolved ? 'border-emerald-200' : hz.severity === 'High' ? 'border-red-300' : 'border-yellow-300';
-                        const cardBg = isResolved ? 'bg-emerald-50/40' : hz.severity === 'High' ? 'bg-red-50/60' : 'bg-yellow-50/60';
+                        const isReported = hz.status === 'Reported';
+                        const dotColor = isResolved ? 'bg-emerald-500' : isReported ? 'bg-red-500' : 'bg-yellow-400';
+                        const cardBorder = isResolved ? 'border-emerald-200' : isReported ? 'border-red-300' : 'border-yellow-300';
+                        const cardBg = isResolved ? 'bg-emerald-50/40' : isReported ? 'bg-red-50/60' : 'bg-yellow-50/60';
                         return (
                           <div
                             key={hz.id}
@@ -1903,9 +1907,10 @@ export function PropertyDashboard() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                       {vegeHazards.map(hz => {
                         const isResolved = hz.status === 'Resolved';
-                        const dotColor = isResolved ? 'bg-emerald-500' : hz.severity === 'High' ? 'bg-red-500' : 'bg-yellow-400';
-                        const cardBorder = isResolved ? 'border-emerald-200' : hz.severity === 'High' ? 'border-red-300' : 'border-yellow-300';
-                        const cardBg = isResolved ? 'bg-emerald-50/40' : hz.severity === 'High' ? 'bg-red-50/60' : 'bg-yellow-50/60';
+                        const isReported = hz.status === 'Reported';
+                        const dotColor = isResolved ? 'bg-emerald-500' : isReported ? 'bg-red-500' : 'bg-yellow-400';
+                        const cardBorder = isResolved ? 'border-emerald-200' : isReported ? 'border-red-300' : 'border-yellow-300';
+                        const cardBg = isResolved ? 'bg-emerald-50/40' : isReported ? 'bg-red-50/60' : 'bg-yellow-50/60';
                         return (
                           <div
                             key={hz.id}
@@ -1991,4 +1996,3 @@ export function PropertyDashboard() {
     </div>
   );
 }
-

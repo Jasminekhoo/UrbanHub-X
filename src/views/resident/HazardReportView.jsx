@@ -116,7 +116,7 @@ export function HazardReportView() {
         startTime: "8:35 PM",
         endTime: "8:44 PM",
         duration: "9 min",
-        checkpointsRecorded: "L-01 â†’ L-02 â†’ L-03 â†’ L-04 â†’ L-08",
+        checkpointsRecorded: "L-01  L-02  L-03  L-04  L-08",
         status: "Completed Safely"
       },
       {
@@ -126,7 +126,7 @@ export function HazardReportView() {
         startTime: "9:10 PM",
         endTime: "9:18 PM",
         duration: "8 min",
-        checkpointsRecorded: "L-01 â†’ L-05 â†’ L-06 â†’ L-07 â†’ L-08",
+        checkpointsRecorded: "L-01  L-05  L-06  L-07  L-08",
         status: "Completed (Check-in logged)"
       }
     ];
@@ -545,7 +545,7 @@ export function HazardReportView() {
             onClick={() => setResidentTab('home')}
             className="text-[11px] font-semibold text-[#2864A6] hover:underline cursor-pointer"
           >
-            View in Feed â†’
+            View in Feed
           </button>
         </div>
 

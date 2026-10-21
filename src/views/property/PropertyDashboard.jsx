@@ -685,7 +685,7 @@ export function PropertyDashboard() {
                     className="text-xs text-[#2864A6] font-semibold hover:underline flex items-center gap-1"
                   >
                     <Maximize2 className="w-3 h-3" />
-                    Open Detailed Map â†’
+                    Open Detailed Map
                   </button>
                 </div>
 
@@ -706,7 +706,7 @@ export function PropertyDashboard() {
                     onClick={() => setPropertyTab('ranking')}
                     className="text-xs text-[#2864A6] font-semibold hover:underline"
                   >
-                    All Ranked ({rankedHazards.length}) â†’
+                    All Ranked ({rankedHazards.length})
                   </button>
                 </div>
 
@@ -840,7 +840,7 @@ export function PropertyDashboard() {
                             }}
                             className="px-3 py-1.5 rounded-lg bg-[#1F9D8B] hover:bg-[#178270] text-white font-bold text-[10px] transition-colors"
                           >
-                            View in Inspector â†’
+                            View in Inspector
                           </button>
                         </td>
                       </tr>
@@ -1108,7 +1108,7 @@ export function PropertyDashboard() {
                           onClick={() => setPropertyTab('budget')}
                           className="w-full py-2 px-3 rounded-lg bg-[#2864A6] hover:bg-[#1E3C66] text-white text-xs font-bold shadow flex items-center justify-center gap-1.5 transition"
                         >
-                          <span>Inspect in Budget Optimiser â†’</span>
+                          <span>Inspect in Budget Optimiser</span>
                         </button>
                       </div>
                     );

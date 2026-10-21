@@ -5,14 +5,18 @@
 //   injected twice across different components.
 // - currentApiKey tracks the active key. If the key changes (e.g. user updated .env),
 //   the loader automatically purges the old script and retries with the new key.
-// - authFailed is tracked per key session.
+// - authFailed tracks permanent auth errors (rejected API key, billing inactive,
+//   or API not enabled) per key session.
 // - authCallbacks collects every onAuthFailure callback registered across all
 //   concurrent callers so each one gets notified when auth fails.
+// - loading=async requires a global callback or importLibrary() to notify when
+//   core libraries (Map, ControlPosition, etc.) are actually loaded and ready.
 
 let googleMapsPromise = null;
 let authFailed = false;
 let currentApiKey = null;
 const authCallbacks = new Set();
+const CALLBACK_NAME = '__googleMapsApiInitCallback';
 
 /**
  * Reset loader state (useful if API was just enabled in Google Cloud Console
@@ -21,11 +25,27 @@ const authCallbacks = new Set();
 export function resetGoogleMapsLoader() {
   authFailed = false;
   googleMapsPromise = null;
-  const existing = document.getElementById('google-maps-script');
-  if (existing) existing.remove();
-  if (window.google) {
-    try { delete window.google.maps; } catch (_) {}
+  if (typeof window !== 'undefined') {
+    delete window[CALLBACK_NAME];
+    const existing = document.getElementById('google-maps-script');
+    if (existing) existing.remove();
+    if (window.google) {
+      try { delete window.google.maps; } catch (_) {}
+    }
   }
+}
+
+/**
+ * Check if Google Maps core constants and classes are fully available.
+ */
+export function isGoogleMapsReady() {
+  return Boolean(
+    typeof window !== 'undefined' &&
+    window.google &&
+    window.google.maps &&
+    window.google.maps.Map &&
+    (window.google.maps.ControlPosition || window.google.maps.core?.ControlPosition)
+  );
 }
 
 /**
@@ -43,22 +63,22 @@ export function loadGoogleMapsScript(apiKey, onAuthFailure) {
   }
   currentApiKey = apiKey;
 
-  // Register caller's auth-failure callback so it is notified even when the
+  // Register caller's auth-failure callback so it is notified even when
   // gm_authFailure fired on a previous caller's load attempt.
   if (typeof onAuthFailure === 'function') {
     authCallbacks.add(onAuthFailure);
   }
 
-  // Auth already failed for this key — reject immediately and notify this caller.
+  // Auth already failed for this key — reject permanently to prevent repeated retries.
   if (authFailed) {
     if (typeof onAuthFailure === 'function') {
-      onAuthFailure();
+      try { onAuthFailure(); } catch (_) {}
     }
     return Promise.reject(new Error('GMAPS_AUTH_FAILURE'));
   }
 
-  // API already in the DOM and initialised — resolve immediately.
-  if (window.google && window.google.maps) {
+  // API already in the DOM and initialised with required objects — resolve immediately.
+  if (isGoogleMapsReady()) {
     return Promise.resolve(window.google.maps);
   }
 
@@ -80,34 +100,88 @@ export function loadGoogleMapsScript(apiKey, onAuthFailure) {
       'or Maps JavaScript API not enabled in Google Cloud Console.'
     );
     authFailed = true;
+    googleMapsPromise = null;
 
     // Notify every registered caller.
     authCallbacks.forEach((cb) => {
       try { cb(); } catch (_) {}
     });
     authCallbacks.clear();
-
-    googleMapsPromise = null;
   };
 
   googleMapsPromise = new Promise((resolve, reject) => {
+    let resolved = false;
+
+    const cleanup = () => {
+      delete window[CALLBACK_NAME];
+    };
+
+    const handleSuccess = async () => {
+      if (resolved) return;
+      if (authFailed) {
+        cleanup();
+        reject(new Error('GMAPS_AUTH_FAILURE'));
+        return;
+      }
+
+      try {
+        // If importLibrary is supported (modern Maps JS API), ensure 'maps' and 'core' are loaded
+        if (window.google?.maps?.importLibrary) {
+          await Promise.all([
+            window.google.maps.importLibrary('maps'),
+            window.google.maps.importLibrary('core').catch(() => {}),
+          ]);
+        }
+      } catch (err) {
+        console.warn('[GoogleMapsLoader] importLibrary check failed:', err);
+      }
+
+      if (isGoogleMapsReady()) {
+        resolved = true;
+        cleanup();
+        resolve(window.google.maps);
+      } else {
+        // Fallback polling up to 3 seconds in case modules finish binding
+        const startTime = Date.now();
+        const interval = setInterval(() => {
+          if (authFailed) {
+            clearInterval(interval);
+            cleanup();
+            reject(new Error('GMAPS_AUTH_FAILURE'));
+            return;
+          }
+          if (isGoogleMapsReady()) {
+            clearInterval(interval);
+            resolved = true;
+            cleanup();
+            resolve(window.google.maps);
+          } else if (Date.now() - startTime > 4000) {
+            clearInterval(interval);
+            cleanup();
+            googleMapsPromise = null;
+            reject(new Error('Google Maps script loaded but window.google.maps core classes were not initialised'));
+          }
+        }, 50);
+      }
+    };
+
+    // Global callback invoked by Google Maps API once loader bootstrap finishes
+    window[CALLBACK_NAME] = () => {
+      handleSuccess();
+    };
+
     // Guard: check if an existing script tag has the correct key
     const existing = document.getElementById('google-maps-script');
     if (existing) {
       if (!existing.src.includes(`key=${apiKey}`)) {
         existing.remove();
       } else {
-        const handleLoad = () => {
-          if (!authFailed && window.google && window.google.maps) {
-            resolve(window.google.maps);
-          } else if (authFailed) {
-            reject(new Error('GMAPS_AUTH_FAILURE'));
-          } else {
-            reject(new Error('Google Maps script loaded but window.google.maps is not available'));
-          }
-        };
-        existing.addEventListener('load', handleLoad, { once: true });
+        if (isGoogleMapsReady()) {
+          resolve(window.google.maps);
+          return;
+        }
         existing.addEventListener('error', (e) => {
+          cleanup();
           googleMapsPromise = null;
           reject(e);
         }, { once: true });
@@ -118,24 +192,24 @@ export function loadGoogleMapsScript(apiKey, onAuthFailure) {
     const script = document.createElement('script');
     script.id = 'google-maps-script';
     script.type = 'text/javascript';
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=geometry&loading=async&language=en&region=MY`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=geometry&loading=async&callback=${CALLBACK_NAME}&language=en&region=MY`;
     script.async = true;
     script.defer = true;
 
     script.onload = () => {
-      // gm_authFailure may have already fired by the time onload runs.
       if (authFailed) {
+        cleanup();
         reject(new Error('GMAPS_AUTH_FAILURE'));
         return;
       }
-      if (window.google && window.google.maps) {
-        resolve(window.google.maps);
-      } else {
-        reject(new Error('Google Maps script loaded but window.google.maps is not available'));
-      }
+      // Note: With loading=async, script.onload fires when bootstrap script finishes downloading,
+      // while CALLBACK_NAME fires once Google Maps initializes libraries. We trigger handleSuccess
+      // here as a backup if callback doesn't execute or has already executed.
+      handleSuccess();
     };
 
     script.onerror = (err) => {
+      cleanup();
       googleMapsPromise = null;
       reject(err);
     };

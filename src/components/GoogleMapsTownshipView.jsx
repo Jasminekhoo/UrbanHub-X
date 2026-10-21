@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { loadGoogleMapsScript, resetGoogleMapsLoader } from '../utils/googleMapsLoader';
+import { loadGoogleMapsScript, resetGoogleMapsLoader, isGoogleMapsReady } from '../utils/googleMapsLoader';
 import { ELMINA_CENTER, NODE_COORDINATES, ROUTE_GPS_PATHS, HAZARD_COORDINATES } from '../data/elminaGeoData';
 import { SchematicTownshipMap } from './SchematicTownshipMap';
 
@@ -73,6 +73,7 @@ export function GoogleMapsTownshipView({
     }
 
     const maps = window.google.maps;
+    const ControlPosition = maps.ControlPosition || maps.core?.ControlPosition;
     const isDark = theme === 'night';
 
     const lightStyle = [
@@ -102,13 +103,17 @@ export function GoogleMapsTownshipView({
     // propagate as an unhandled React render error — catch it and fall back.
     let map;
     try {
+      const zoomControlOptions = ControlPosition?.RIGHT_CENTER != null
+        ? { position: ControlPosition.RIGHT_CENTER }
+        : undefined;
+
       map = new maps.Map(mapContainerRef.current, {
         center: ELMINA_CENTER,
         zoom: 15.5,
         mapTypeId: 'roadmap',
         disableDefaultUI: true,
         zoomControl: true,
-        zoomControlOptions: { position: maps.ControlPosition.RIGHT_CENTER },
+        ...(zoomControlOptions ? { zoomControlOptions } : {}),
         fullscreenControl: false,
         styles: isDark ? darkStyle : lightStyle,
       });

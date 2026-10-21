@@ -54,6 +54,10 @@ export function NightSafeProvider({ children }) {
   // Fall detection simulation state
   const [fallDetectionActive, setFallDetectionActive] = useState(false);
 
+  // Unsafe / Assistance request at streetlight simulation state
+  const [unsafeAssistanceActive, setUnsafeAssistanceActive] = useState(false);
+  const [unsafeAssistanceNode, setUnsafeAssistanceNode] = useState(null);
+
   // PIN configuration (Normal cancel PIN + Duress fake cancel PIN)
   const [duressConfig, setDuressConfig] = useState(() => {
     const saved = localStorage.getItem('ns_pin_config');
@@ -254,8 +258,10 @@ export function NightSafeProvider({ children }) {
     setMissedCheckpointPrompt(false);
     if (responseType === 'okay') {
       showToast("Check-in confirmed: Resident marked 'I am okay'.", 'success');
-    } else if (responseType === 'help') {
-      setResidentTab('sos');
+    } else if (responseType === 'help' || responseType === 'unsafe') {
+      const route = SCHEMATIC_ROUTES[selectedRouteId] || SCHEMATIC_ROUTES.A;
+      const currentNode = route.nodes[checkpointIndex] || route.nodes[0];
+      triggerUnsafeAssistance(currentNode);
     } else if (responseType === 'no_response') {
       // Create follow up alert for security
       const followUpAlert = {
@@ -341,6 +347,21 @@ export function NightSafeProvider({ children }) {
 
   const cancelFallDetection = () => {
     setFallDetectionActive(false);
+  };
+
+  // Unsafe / Assistance request at streetlight simulation demo
+  const triggerUnsafeAssistance = (nodeId = null) => {
+    const route = SCHEMATIC_ROUTES[selectedRouteId] || SCHEMATIC_ROUTES.A;
+    const currentNode = nodeId || route.nodes[checkpointIndex] || route.nodes[0];
+    setUnsafeAssistanceNode(currentNode);
+    setUnsafeAssistanceActive(true);
+    setMissedCheckpointPrompt(false); // dismiss check-in prompt if open
+    showToast(`Assistance request initiated at Streetlight ${currentNode}. 10s countdown active.`, 'warning');
+  };
+
+  const cancelUnsafeAssistance = () => {
+    setUnsafeAssistanceActive(false);
+    setUnsafeAssistanceNode(null);
   };
 
   // Walking Demo: advance to next node and trigger safety confirmation modal
@@ -569,6 +590,10 @@ export function NightSafeProvider({ children }) {
         fallDetectionActive,
         triggerFallDetectionDemo,
         cancelFallDetection,
+        unsafeAssistanceActive,
+        unsafeAssistanceNode,
+        triggerUnsafeAssistance,
+        cancelUnsafeAssistance,
         triggerWalkingDemo,
         submitHazardReport,
 

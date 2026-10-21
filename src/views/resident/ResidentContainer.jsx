@@ -8,6 +8,7 @@ import { HazardReportView } from './HazardReportView';
 import { SettingsView } from './SettingsView';
 import { SOSModal } from './SOSModal';
 import { FallDetectionModal } from './FallDetectionModal';
+import { UnsafeAssistanceModal } from './UnsafeAssistanceModal';
 import {
   Home,
   Compass,
@@ -32,6 +33,9 @@ export function ResidentContainer() {
     fallDetectionActive,
     triggerFallDetectionDemo,
     cancelFallDetection,
+    unsafeAssistanceActive,
+    unsafeAssistanceNode,
+    cancelUnsafeAssistance,
     triggerWalkingDemo,
     showToast,
   } = useNightSafe();
@@ -303,6 +307,27 @@ export function ResidentContainer() {
               onTimeout={() => {
                 cancelFallDetection();
                 fireSOS('Fall Detection Emergency — Unresponsive Resident (10s timeout)');
+              }}
+            />
+          )}
+
+          {/* Streetlight Checkpoint: I Feel Unsafe / Need Assistance (10s Countdown & Emergency SOS Trigger) */}
+          {unsafeAssistanceActive && (
+            <UnsafeAssistanceModal
+              checkpointNode={unsafeAssistanceNode || 'L-04'}
+              onDismiss={() => {
+                cancelUnsafeAssistance();
+                showToast("Assistance alert cancelled. Glad you are safe!", 'success');
+              }}
+              onSosNow={() => {
+                const nodeStr = unsafeAssistanceNode ? ` at Node ${unsafeAssistanceNode}` : '';
+                cancelUnsafeAssistance();
+                fireSOS(`Streetlight Assistance Alert — Resident Requested SOS${nodeStr}`);
+              }}
+              onTimeout={() => {
+                const nodeStr = unsafeAssistanceNode ? ` at Node ${unsafeAssistanceNode}` : '';
+                cancelUnsafeAssistance();
+                fireSOS(`Streetlight Assistance SOS — Unresponsive Resident 10s Timeout${nodeStr}`);
               }}
             />
           )}

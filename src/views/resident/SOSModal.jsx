@@ -14,19 +14,19 @@ import {
   Volume2
 } from 'lucide-react';
 
-// ── Constants ────────────────────────────────────────────────────────────────
+// â”€â”€ Constants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const NORMAL_PIN    = '1234';
 const PIN_LENGTH    = 4;
 const ETA_START_SEC = 4 * 60 + 15;
 
 const LIVE_UPDATES = [
-  { delay: 0,    icon: '🔔', text: 'Alert received by Security Operations' },
-  { delay: 2000, icon: '📍', text: 'Your location shared with duty officer' },
-  { delay: 5000, icon: '🚔', text: 'Officer dispatched — en route to your location' },
-  { delay: 9000, icon: '🛡️', text: 'Security team monitoring your location' },
+  { delay: 0,    icon: 'ðŸ””', text: 'Alert received by Security Operations' },
+  { delay: 2000, icon: 'ðŸ“', text: 'Your location shared with duty officer' },
+  { delay: 5000, icon: 'ðŸš”', text: 'Officer dispatched  —  en route to your location' },
+  { delay: 9000, icon: 'ðŸ›¡ï¸', text: 'Security team monitoring your location' },
 ];
 
-// ── Web Audio siren ──────────────────────────────────────────────────────────
+// â”€â”€ Web Audio siren â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function buildAlarm() {
   try {
     const ctx  = new (window.AudioContext || window.webkitAudioContext)();
@@ -59,7 +59,7 @@ function buildAlarm() {
   }
 }
 
-// ── Backdrop — defined OUTSIDE SOSModal so it never gets re-mounted ──────────
+// â”€â”€ Backdrop  —  defined OUTSIDE SOSModal so it never gets re-mounted â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Defining it inside the render body would cause React to treat it as a new
 // component type on every render, unmounting/remounting and causing flickering.
 function Backdrop({ children, center }) {
@@ -79,7 +79,7 @@ function Backdrop({ children, center }) {
   );
 }
 
-// ── PIN dots ─────────────────────────────────────────────────────────────────
+// â”€â”€ PIN dots â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function PinDots({ filled }) {
   return (
     <div className="flex gap-3 justify-center my-4">
@@ -97,7 +97,7 @@ function PinDots({ filled }) {
   );
 }
 
-// ── Numpad ───────────────────────────────────────────────────────────────────
+// â”€â”€ Numpad â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function Numpad({ onDigit, onDelete }) {
   const keys = ['1','2','3','4','5','6','7','8','9','','0','del'];
   return (
@@ -127,11 +127,11 @@ function Numpad({ onDigit, onDelete }) {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// SOSModal — render inside the phone screen div (uses absolute positioning)
-// ═══════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// SOSModal  —  render inside the phone screen div (uses absolute positioning)
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 export function SOSModal({ alertId, onClose }) {
-  const { duressConfig, resolveAlert, addAlertNote, showToast } = useNightSafe();
+  const { alerts, duressConfig, resolveAlert, addAlertNote, showToast } = useNightSafe();
 
   const [phase, setPhase]             = useState('active');
   const [shownUpdates, setShownUpdates] = useState([]);
@@ -143,14 +143,27 @@ export function SOSModal({ alertId, onClose }) {
 
   const stopAlarmRef = useRef(null);
 
-  // ── Start alarm on mount ─────────────────────────────────────────────────
+  // Derive canonical alert if alertId provided
+  const canonicalAlert = alertId ? alerts.find(a => a.id === alertId) : null;
+
+  // Sync state if canonical alert is resolved from security dashboard
+  useEffect(() => {
+    if (canonicalAlert && (canonicalAlert.status === 'Resolved' || canonicalAlert.status.includes('Resolved'))) {
+      stopAlarmRef.current?.();
+      setPhase('cancelled');
+      const timer = setTimeout(onClose, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [canonicalAlert, onClose]);
+
+  // Start alarm on mount
   useEffect(() => {
     const stop = buildAlarm();
     stopAlarmRef.current = stop;
     return () => stop();
   }, []);
 
-  // ── Mute toggle ──────────────────────────────────────────────────────────
+  // Mute toggle
   const handleMuteToggle = () => {
     if (!muted) {
       stopAlarmRef.current?.();
@@ -162,18 +175,33 @@ export function SOSModal({ alertId, onClose }) {
     setMuted(m => !m);
   };
 
-  // ── Stream live updates ──────────────────────────────────────────────────
+  // Stream live updates and reflect security operations dispatch
   useEffect(() => {
     const timers = LIVE_UPDATES.map(({ delay, icon, text }) =>
       setTimeout(() => {
-        setShownUpdates(prev => [...prev, { icon, text }]);
+        setShownUpdates(prev => {
+          if (prev.some(item => item.text === text)) return prev;
+          return [...prev, { icon, text }];
+        });
         if (text.includes('dispatched')) setEtaActive(true);
       }, delay)
     );
     return () => timers.forEach(clearTimeout);
   }, []);
 
-  // ── ETA countdown ────────────────────────────────────────────────────────
+  // Reflect officer assignment in live updates if guard is dispatched
+  useEffect(() => {
+    if (canonicalAlert?.assignedGuard) {
+      setEtaActive(true);
+      setShownUpdates(prev => {
+        const text = `Officer assigned: ${canonicalAlert.assignedGuard} en route`;
+        if (prev.some(u => u.text === text)) return prev;
+        return [...prev, { icon: '🚔', text }];
+      });
+    }
+  }, [canonicalAlert?.assignedGuard]);
+
+  // â”€â”€ ETA countdown â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     if (!etaActive) return;
     const iv = setInterval(() => setEtaSec(s => Math.max(0, s - 1)), 1000);
@@ -182,7 +210,7 @@ export function SOSModal({ alertId, onClose }) {
 
   const formatEta = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
-  // ── PIN logic ─────────────────────────────────────────────────────────────
+  // â”€â”€ PIN logic â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleDigit = d => {
     if (pin.length >= PIN_LENGTH) return;
     const next = pin + d;
@@ -210,7 +238,7 @@ export function SOSModal({ alertId, onClose }) {
     } else if (duressEnabled && entered === duressPin) {
       if (alertId) addAlertNote(
         alertId,
-        '⚠️ Resident entered DURESS PIN — covert fake cancellation. Maintain full response, do NOT stand down'
+        'âš ï¸ Resident entered DURESS PIN  —  covert fake cancellation. Maintain full response, do NOT stand down'
       );
       stopAlarmRef.current?.();
       showToast('SOS cancelled.', 'info');
@@ -222,19 +250,19 @@ export function SOSModal({ alertId, onClose }) {
     }
   };
 
-  // ── Phase: active ─────────────────────────────────────────────────────────
+  // â”€â”€ Phase: active â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   if (phase === 'active') return (
     <Backdrop>
       <div className="w-full bg-white rounded-t-3xl shadow-2xl overflow-hidden animate-slide-up">
 
-        {/* Red header — no animate-pulse on wrapper to avoid re-layout */}
+        {/* Red header  —  no animate-pulse on wrapper to avoid re-layout */}
         <div className="bg-red-600 px-4 pt-5 pb-3.5 relative overflow-hidden">
           <div className="relative z-10 flex items-center justify-between gap-2">
 
             {/* Icon + title */}
             <div className="flex items-center gap-2.5">
               <div className="relative shrink-0 w-9 h-9">
-                {/* Ping ring stays in its own layer — does not affect layout */}
+                {/* Ping ring stays in its own layer  —  does not affect layout */}
                 <span className="absolute inset-0 rounded-full bg-red-300 opacity-60 animate-ping" />
                 <div className="relative w-9 h-9 rounded-full bg-white/20 border-2 border-white/40 flex items-center justify-center">
                   <PhoneCall className="w-4 h-4 text-white" />
@@ -247,7 +275,7 @@ export function SOSModal({ alertId, onClose }) {
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
                   <span className="text-red-100 text-[9px] font-bold uppercase tracking-widest">
-                    Live · Security Notified
+                    Live  ·  Security Notified
                   </span>
                 </div>
               </div>
@@ -291,7 +319,7 @@ export function SOSModal({ alertId, onClose }) {
         <div className="flex items-center gap-2 px-4 py-2 bg-red-50 border-b border-red-100">
           <MapPin className="w-3 h-3 text-red-500 shrink-0" />
           <span className="text-[10px] text-red-700 font-semibold truncate">
-            Near Lamp L-04 (Central Boulevard) · Simulated Location
+            Near Lamp L-04 (Central Boulevard)  ·  Simulated Location
           </span>
         </div>
 
@@ -306,7 +334,7 @@ export function SOSModal({ alertId, onClose }) {
           {shownUpdates.length === 0 && (
             <div className="flex items-center gap-2 text-slate-400 text-xs">
               <Loader2 className="w-3 h-3 animate-spin" />
-              <span>Connecting to security operations…</span>
+              <span>Connecting to security operationsâ€¦</span>
             </div>
           )}
           {shownUpdates.map((u, i) => (
@@ -326,14 +354,14 @@ export function SOSModal({ alertId, onClose }) {
             Cancel SOS
           </button>
           <p className="text-center text-[9px] text-slate-400 mt-1.5 leading-relaxed">
-            PIN required to cancel · Stay calm and stay visible
+            PIN required to cancel  ·  Stay calm and stay visible
           </p>
         </div>
       </div>
     </Backdrop>
   );
 
-  // ── Phase: cancel-pin ─────────────────────────────────────────────────────
+  // â”€â”€ Phase: cancel-pin â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   if (phase === 'cancel-pin') return (
     <Backdrop>
       <div className="w-full bg-white rounded-t-3xl shadow-2xl overflow-hidden animate-slide-up">
@@ -371,7 +399,7 @@ export function SOSModal({ alertId, onClose }) {
     </Backdrop>
   );
 
-  // ── Phase: cancelled / duress-cancelled (same UI shown to coercer) ────────
+  // â”€â”€ Phase: cancelled / duress-cancelled (same UI shown to coercer) â”€â”€â”€â”€â”€â”€â”€â”€
   if (phase === 'cancelled' || phase === 'duress-cancelled') return (
     <Backdrop center>
       <div className="mx-4 w-full max-w-[280px] bg-white rounded-3xl shadow-2xl p-7 flex flex-col items-center gap-3">

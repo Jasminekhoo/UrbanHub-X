@@ -1,4 +1,4 @@
-// NightSafe Loop - Shared Data Model & Simulated Scenario
+﻿// NightSafe Loop - Shared Data Model & Simulated Scenario
 // Hackathon Context: Sime Darby Property University Hackathon 2026
 
 import {
@@ -22,8 +22,8 @@ export {
 } from './cityOfElminaAreas';
 
 export const TOWNSHIP_INFO = {
-  name: "Sime Darby Property — Sample Township (Demo Environment)",
-  badge: "Prototype Demo · Simulated Data",
+  name: "Sime Darby Property  â€”  Sample Township (Demo Environment)",
+  badge: "Prototype Demo  Â·  Simulated Data",
   disclaimer: "No real emergency services or streetlights are connected.",
   hackathonTrack: "People: Safety & Security, Accessibility & Inclusion, Getting Around",
   studentTeam: "2 Quantity Surveying & 2 Computer Science Students"
@@ -34,7 +34,7 @@ export const RESIDENT_PROFILE = {
   title: "Aina",
   origin: "Community Residence",
   destination: "Central Transit Stop",
-  estimatedTime: "8–10 min",
+  estimatedTime: "8 â€” 10 min",
   emergencyContact: "Emergency Contact",
   phoneSimulated: "Active during journey",
   duressPin: "9142",
@@ -56,7 +56,7 @@ export const SCHEMATIC_NODES = [
   {
     id: "L-02",
     name: "North Avenue Junction",
-    area: "Route A — Main Avenue",
+    area: "Route A  â€”  Main Avenue",
     x: 220,
     y: 120,
     type: "checkpoint_lamp",
@@ -66,7 +66,7 @@ export const SCHEMATIC_NODES = [
   {
     id: "L-03",
     name: "Main Avenue Pedestrian Walkway",
-    area: "Route A — Main Avenue",
+    area: "Route A  â€”  Main Avenue",
     x: 420,
     y: 120,
     type: "checkpoint_lamp",
@@ -76,7 +76,7 @@ export const SCHEMATIC_NODES = [
   {
     id: "L-04",
     name: "Central Boulevard Junction",
-    area: "Route A — Main Avenue",
+    area: "Route A  â€”  Main Avenue",
     x: 600,
     y: 160,
     type: "checkpoint_lamp",
@@ -86,7 +86,7 @@ export const SCHEMATIC_NODES = [
   {
     id: "L-05",
     name: "Garden Shortcut East Gate",
-    area: "Route B — Garden Shortcut",
+    area: "Route B  â€”  Garden Shortcut",
     x: 240,
     y: 380,
     type: "checkpoint_lamp",
@@ -96,7 +96,7 @@ export const SCHEMATIC_NODES = [
   {
     id: "L-06",
     name: "Garden Shortcut Path",
-    area: "Route B — Garden Shortcut",
+    area: "Route B  â€”  Garden Shortcut",
     x: 420,
     y: 380,
     type: "checkpoint_lamp",
@@ -106,7 +106,7 @@ export const SCHEMATIC_NODES = [
   {
     id: "L-07",
     name: "Garden Junction",
-    area: "Route B — Garden Shortcut",
+    area: "Route B  â€”  Garden Shortcut",
     x: 580,
     y: 350,
     type: "checkpoint_lamp",
@@ -186,7 +186,7 @@ export const SCHEMATIC_ROUTES = {
   }
 };
 
-// Initial Hazards dataset — 3 feeds matched to actual site photos
+// Initial Hazards dataset  â€”  3 feeds matched to actual site photos
 export const INITIAL_HAZARDS = [
   {
     id: "HZ-101",
@@ -203,6 +203,8 @@ export const INITIAL_HAZARDS = [
     evidenceConfidence: "High",
     status: "Reported",
     reportDate: "18 Oct 2026",
+    upvotes: 14,
+    validatedBy: [],
     figureUrl: BROKEN_STREET_LIGHT_IMG,
     figureCaption: "Street lamp casing completely shattered, bulb exposed to weather",
     source: "Resident report",
@@ -227,6 +229,8 @@ export const INITIAL_HAZARDS = [
     evidenceConfidence: "High",
     status: "Under verification",
     reportDate: "20 Oct 2026",
+    upvotes: 6,
+    validatedBy: [],
     figureUrl: BROKEN_STREET_LIGHT_2_JPEG_IMG,
     figureCaption: "Bent housing bracket with intermittently flickering LED pole head",
     source: "Security Routine Audit",
@@ -251,6 +255,8 @@ export const INITIAL_HAZARDS = [
     evidenceConfidence: "High",
     status: "Reported",
     reportDate: "17 Oct 2026",
+    upvotes: 22,
+    validatedBy: [],
     figureUrl: DAMAGED_PATHWAY_IMG,
     figureCaption: "Severely fractured concrete path with exposed rubble and deep fissures",
     source: "Resident report",
@@ -275,6 +281,8 @@ export const INITIAL_HAZARDS = [
     evidenceConfidence: "High",
     status: "Under verification",
     reportDate: "20 Oct 2026",
+    upvotes: 11,
+    validatedBy: [],
     figureUrl: DAMAGED_PATHWAY_2_JPEG_IMG,
     figureCaption: "Subsided paving tiles with uneven elevation drop exceeding 65mm",
     source: "Resident report",
@@ -299,6 +307,8 @@ export const INITIAL_HAZARDS = [
     evidenceConfidence: "High",
     status: "Reported",
     reportDate: "20 Oct 2026",
+    upvotes: 5,
+    validatedBy: [],
     figureUrl: DAMAGED_PATHWAY_3_JPEG_IMG,
     figureCaption: "Chipped concrete kerb with exposed aggregate and broken accessibility slope",
     source: "Facilities Inspection",
@@ -323,6 +333,8 @@ export const INITIAL_HAZARDS = [
     evidenceConfidence: "High",
     status: "Under verification",
     reportDate: "18 Oct 2026",
+    upvotes: 8,
+    validatedBy: [],
     figureUrl: OVERGROWN_VEGETATION_IMG,
     figureCaption: "Dense overhanging tree branches encroaching across the roadside walkway",
     source: "Property Grounds Inspection",
@@ -347,6 +359,8 @@ export const INITIAL_HAZARDS = [
     evidenceConfidence: "High",
     status: "Scheduled",
     reportDate: "20 Oct 2026",
+    upvotes: 3,
+    validatedBy: [],
     figureUrl: OVERGROWN_VEGETATION_2_JPEG_IMG,
     figureCaption: "Overgrown roadside shrubs narrowing available walking width to under 0.8m",
     source: "Resident report",
@@ -422,7 +436,7 @@ export const CANDIDATE_INTERVENTIONS = [
   }
 ];
 
-// Initial Alerts — seeded demo queue so the Security console is populated on first
+// Initial Alerts  â€”  seeded demo queue so the Security console is populated on first
 // load. Presenter can still trigger new Duress PIN / SOS cases on top of these.
 export const INITIAL_ALERTS = [
   {
@@ -432,9 +446,9 @@ export const INITIAL_ALERTS = [
     resident: "Aina",
     residentId: "RES-8821",
     location: "Near Lamp L-07, Garden Junction",
-    lastCheckpoint: "L-07 · 9:14 PM",
+    lastCheckpoint: "L-07  Â·  9:14 PM",
     alertReceived: "9:15 PM",
-    locationFreshness: "Last available demo location — not live tracking",
+    locationFreshness: "Last recorded location — not live tracking",
     status: "Awaiting security acknowledgement",
     notes: [],
     category: "Personal Safety (Discreet)",
@@ -448,9 +462,9 @@ export const INITIAL_ALERTS = [
     resident: "Aina",
     residentId: "RES-8821",
     location: "Near Lamp L-04 (Central Boulevard Junction)",
-    lastCheckpoint: "L-03 · 9:12 PM",
+    lastCheckpoint: "L-03  Â·  9:12 PM",
     alertReceived: "9:22 PM",
-    locationFreshness: "Last available demo location — not live tracking",
+    locationFreshness: "Last recorded location — not live tracking",
     status: "Awaiting security acknowledgement",
     notes: [],
     category: "Personal Safety",
@@ -464,13 +478,13 @@ export const INITIAL_ALERTS = [
     resident: "Marcus Lim",
     residentId: "RES-7734",
     location: "Near Lamp L-06 (Garden Shortcut Path)",
-    lastCheckpoint: "L-05 · 9:08 PM",
+    lastCheckpoint: "L-05  Â·  9:08 PM",
     alertReceived: "9:11 PM",
-    locationFreshness: "Last available demo location — not live tracking",
+    locationFreshness: "Last recorded location — not live tracking",
     status: "Response in progress",
     notes: [
-      "9:12 PM — Officer: Alert acknowledged by Duty Security Lead.",
-      "9:14 PM — Officer: Patrol unit dispatched to Garden Shortcut Path."
+      "9:12 PM  â€”  Officer: Alert acknowledged by Duty Security Lead.",
+      "9:14 PM  â€”  Officer: Patrol unit dispatched to Garden Shortcut Path."
     ],
     category: "Personal Safety",
     timestamp: "9:11 PM",
@@ -483,11 +497,11 @@ export const INITIAL_ALERTS = [
     resident: "Aina",
     residentId: "RES-8821",
     location: "Near Lamp L-03 (Main Avenue Pedestrian Walkway)",
-    lastCheckpoint: "L-02 · 9:09 PM",
+    lastCheckpoint: "L-02  Â·  9:09 PM",
     alertReceived: "9:05 PM",
-    locationFreshness: "Simulated checkpoint overdue · Prompt unconfirmed",
+    locationFreshness: "Simulated checkpoint overdue  Â·  Prompt unconfirmed",
     status: "Acknowledged",
-    notes: ["9:06 PM — Officer: Wellbeing callback attempted, pending resident reply."],
+    notes: ["9:06 PM  â€”  Officer: Wellbeing callback attempted, pending resident reply."],
     category: "Checkpoint Overdue",
     timestamp: "9:05 PM",
     isDuress: false
@@ -499,13 +513,13 @@ export const INITIAL_ALERTS = [
     resident: "Priya Nair",
     residentId: "RES-6612",
     location: "Near Lamp L-02 (North Avenue Junction)",
-    lastCheckpoint: "L-01 · 8:52 PM",
+    lastCheckpoint: "L-01  Â·  8:52 PM",
     alertReceived: "8:54 PM",
-    locationFreshness: "Last available demo location — not live tracking",
-    status: "Resolved — demo",
+    locationFreshness: "Last recorded location — not live tracking",
+    status: "Resolved",
     notes: [
-      "8:56 PM — Officer: Patrol guard arrived on scene, resident safe.",
-      "9:02 PM — Officer: Case closed, luminaires returned to corridor mode."
+      "8:56 PM  â€”  Officer: Patrol guard arrived on scene, resident safe.",
+      "9:02 PM  â€”  Officer: Case closed, luminaires returned to corridor mode."
     ],
     category: "Personal Safety",
     timestamp: "8:54 PM",
@@ -521,10 +535,10 @@ export const DURESS_ALERT_SEED = {
   resident: "Aina",
   residentId: "RES-8821",
   location: "Near Lamp L-07, Garden Junction",
-  lastCheckpoint: "L-07 · 9:14 PM",
+  lastCheckpoint: "L-07  Â·  9:14 PM",
   alertReceived: "9:15 PM",
-  locationFreshness: "Last available demo location — not live tracking",
-  status: "Awaiting security acknowledgement", // 'Awaiting security acknowledgement' | 'Acknowledged' | 'Response in progress' | 'Resolved — demo'
+  locationFreshness: "Last recorded location — not live tracking",
+  status: "Awaiting security acknowledgement", // 'Awaiting security acknowledgement' | 'Acknowledged' | 'Response in progress' | 'Resolved'
   notes: [],
   category: "Personal Safety (Discreet)",
   timestamp: "9:15 PM",
@@ -667,6 +681,19 @@ export function solveKnapsackBudget(budget, items = CANDIDATE_INTERVENTIONS) {
   };
 }
 
+// Shared Priority Scoring formula (Screen M4 & verification queue)
+// Weights default to Severity 40%, Pedestrian Exposure 35%, Urgency 25%
+export function calculateHazardPriorityScore(item, weights = { severity: 40, exposure: 35, urgency: 25 }) {
+  if (!item) return 0;
+  const sevScore = item.severity === 'High' ? 10 : item.severity === 'Medium' ? 6 : 3;
+  const expScore = item.pedestrianExposure === 'High' ? 10 : item.pedestrianExposure === 'Medium' ? 6 : 3;
+  const urgScore = item.urgency === 'High' ? 10 : item.urgency === 'Medium' ? 6 : 3;
+
+  const totalWeight = (weights.severity || 0) + (weights.exposure || 0) + (weights.urgency || 0);
+  const weighted = (sevScore * weights.severity + expScore * weights.exposure + urgScore * weights.urgency) / (totalWeight || 1);
+  return Math.round(weighted * 10);
+}
+
 // Model formula: Route Cost = Base Time Index + Lighting Penalty + Sightline Penalty + Pathway Penalty
 export function calculateRouteCost(routeId, appliedInterventions = []) {
   const base = SCHEMATIC_ROUTES[routeId];
@@ -704,3 +731,4 @@ export function calculateRouteCost(routeId, appliedInterventions = []) {
     delta: base.totalCost - total
   };
 }
+

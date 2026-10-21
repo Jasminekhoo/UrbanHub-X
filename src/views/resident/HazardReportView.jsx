@@ -55,10 +55,13 @@ export function HazardReportView() {
   const [description, setDescription] = useState("Lamp is not providing consistent illumination along pedestrian walkway.");
   const [contactInfo, setContactInfo] = useState("");
   const [photoAttached, setPhotoAttached] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedReport, setSubmittedReport] = useState(null);
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
+
     const finalLocation = isCustomLocation ? customLocationText.trim() : location;
     if (!finalLocation) {
       showToast('Please specify a location.', 'error');
@@ -69,17 +72,26 @@ export function HazardReportView() {
       return;
     }
 
-    const created = submitHazardReport({
-      title: title.trim() || `${category.split('/')[0].trim()} at ${finalLocation}`,
-      category,
-      location: finalLocation,
-      affectedNode: isCustomLocation ? 'L-04' : affectedNode,
-      severity,
-      description,
-      contactInfo: contactInfo.trim()
-    });
+    setIsSubmitting(true);
+    try {
+      const created = submitHazardReport({
+        title: title.trim() || `${category.split('/')[0].trim()} at ${finalLocation}`,
+        category,
+        location: finalLocation,
+        affectedNode: isCustomLocation ? 'L-04' : affectedNode,
+        severity,
+        description,
+        contactInfo: contactInfo.trim(),
+        figureUrl: photoAttached ? '/broken-street-light-2.jpeg' : null,
+        figureCaption: photoAttached ? `Resident uploaded photo for ${finalLocation}` : null
+      });
 
-    setSubmittedReport(created);
+      setSubmittedReport(created);
+    } catch (err) {
+      showToast('Failed to submit hazard report. Please try again.', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Local state for R10 tab & filter
@@ -100,21 +112,21 @@ export function HazardReportView() {
       {
         id: "JH-101",
         date: "Today",
-        route: "Route A — Main Avenue",
+        route: "Route A  —  Main Avenue",
         startTime: "8:35 PM",
         endTime: "8:44 PM",
         duration: "9 min",
-        checkpointsRecorded: "L-01 → L-02 → L-03 → L-04 → L-08",
+        checkpointsRecorded: "L-01 â†’ L-02 â†’ L-03 â†’ L-04 â†’ L-08",
         status: "Completed Safely"
       },
       {
         id: "JH-102",
         date: "Yesterday",
-        route: "Route B — Garden Shortcut",
+        route: "Route B  —  Garden Shortcut",
         startTime: "9:10 PM",
         endTime: "9:18 PM",
         duration: "8 min",
-        checkpointsRecorded: "L-01 → L-05 → L-06 → L-07 → L-08",
+        checkpointsRecorded: "L-01 â†’ L-05 â†’ L-06 â†’ L-07 â†’ L-08",
         status: "Completed (Check-in logged)"
       }
     ];
@@ -261,7 +273,7 @@ export function HazardReportView() {
                   </span>
                 </div>
                 <div className="text-xs text-slate-500">
-                  Time: {jh.date} · {jh.startTime} to {jh.endTime} ({jh.duration})
+                  Time: {jh.date}  ·  {jh.startTime} to {jh.endTime} ({jh.duration})
                 </div>
                 <div className="p-2 rounded bg-slate-50 border border-slate-200 text-[11px] text-slate-600 font-mono">
                   Checkpoints: {jh.checkpointsRecorded}
@@ -434,7 +446,7 @@ export function HazardReportView() {
               />
               <div className="absolute top-1.5 left-2 px-2 py-0.5 bg-white/90 backdrop-blur-sm rounded-md border border-slate-200 shadow-2xs flex items-center gap-1 z-10 pointer-events-none">
                 <MapPin className="w-2.5 h-2.5 text-[#2864A6]" />
-                <span className="text-[9px] font-bold text-slate-700">Location Preview ({affectedNode}) · Google Maps</span>
+                <span className="text-[9px] font-bold text-slate-700">Location Preview ({affectedNode})  ·  Google Maps</span>
               </div>
             </div>
           </div>
@@ -506,7 +518,7 @@ export function HazardReportView() {
             className="p-3 rounded-xl border border-dashed border-slate-300 hover:border-slate-400 bg-slate-50 cursor-pointer text-center text-xs text-slate-600 flex items-center justify-center gap-2 transition"
           >
             <Camera className="w-4 h-4 text-slate-400" />
-            <span>{photoAttached ? '✓ Photo Attached: inspection_site.jpg' : 'Attach Photo (Optional)'}</span>
+            <span>{photoAttached ? 'âœ“ Photo Attached: inspection_site.jpg' : 'Attach Photo (Optional)'}</span>
           </div>
 
           {/* Submit */}
@@ -533,7 +545,7 @@ export function HazardReportView() {
             onClick={() => setResidentTab('home')}
             className="text-[11px] font-semibold text-[#2864A6] hover:underline cursor-pointer"
           >
-            View in Feed →
+            View in Feed â†’
           </button>
         </div>
 

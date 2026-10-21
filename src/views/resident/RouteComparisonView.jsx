@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNightSafe } from '../../context/NightSafeContext';
 import { GoogleMapsTownshipView } from '../../components/GoogleMapsTownshipView';
+import { calculateRouteCost } from '../../data/nightSafeData';
 import {
   Clock,
   Ruler,
@@ -16,7 +17,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 
-// ── Route categories at top ───────────────────────────────────────────────────
+// â”€â”€ Route categories at top â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const CATEGORIES = [
   {
     id: 'safest',
@@ -56,7 +57,7 @@ const CATEGORIES = [
   },
 ];
 
-// ── Route data (Elmina-flavoured) ─────────────────────────────────────────────
+// â”€â”€ Route data (Elmina-flavoured) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const ROUTE_DATA = [
   {
     id: 'A',
@@ -149,11 +150,64 @@ const safetyColor = (score) => {
 };
 
 export function RouteComparisonView() {
-  const { setResidentTab, selectedRouteId, setSelectedRouteId, routeCategory, setRouteCategory, startJourney, activeLamps, hazards } = useNightSafe();
+  const {
+    setResidentTab,
+    selectedRouteId,
+    setSelectedRouteId,
+    routeCategory,
+    setRouteCategory,
+    startJourney,
+    activeLamps,
+    hazards,
+    appliedInterventions,
+    journeyOrigin,
+    journeyDestination
+  } = useNightSafe();
   
   // Initialize from context or routeId
   const [activeCategory, setActiveCategory] = useState(routeCategory || 'safest');
   const [selected, setSelected] = useState(selectedRouteId || 'A');
+
+  // Compute dynamic route safety metrics based on appliedInterventions and active hazards
+  const dynamicRoutes = ROUTE_DATA.map(route => {
+    const costData = calculateRouteCost(route.id, appliedInterventions || []);
+    // Safety score formula: scale total cost inversely into 0-100 (baseline 24-40 range)
+    const normalizedSafetyScore = Math.max(50, Math.min(96, Math.round(100 - (costData.totalCost * 1.3))));
+    
+    // Filter active (unresolved) hazards affecting this route
+    const activeRouteHazards = hazards.filter(h => 
+      h.status !== 'Resolved' &&
+      ((h.routesAffected && h.routesAffected.includes(route.id)) || (route.id === 'A' && h.affectedNode === 'L-04') || (route.id === 'B' && h.affectedNode === 'L-06'))
+    );
+
+    const hazardCountText = activeRouteHazards.length === 0 
+      ? '0 hazards' 
+      : `${activeRouteHazards.length} active`;
+
+    return {
+      ...route,
+      safetyScore: normalizedSafetyScore,
+      metrics: route.metrics.map(m => {
+        if (m.label === 'Known Hazards') {
+          return {
+            ...m,
+            value: hazardCountText,
+            status: activeRouteHazards.length === 0 ? 'good' : activeRouteHazards.some(h => h.severity === 'High') ? 'warn' : 'caution'
+          };
+        }
+        if (m.label === 'Street Lighting' && costData.lightingPenalty <= 4) {
+          return { ...m, value: 'Optimal (96%)', status: 'good' };
+        }
+        if (m.label === 'Sightlines' && costData.sightlinePenalty <= 2) {
+          return { ...m, value: 'Cleared', status: 'good' };
+        }
+        if (m.label === 'Walkway Condition' && costData.pathwayPenalty <= 2) {
+          return { ...m, value: 'Repaved', status: 'good' };
+        }
+        return m;
+      })
+    };
+  });
 
   // Keep in sync with parent context if changed externally
   useEffect(() => {
@@ -192,7 +246,7 @@ export function RouteComparisonView() {
   };
 
   // Re-order routes so the chosen category's recommended route is shown first
-  const sortedRoutes = [...ROUTE_DATA].sort((a, b) => {
+  const sortedRoutes = [...dynamicRoutes].sort((a, b) => {
     if (a.category === activeCategory) return -1;
     if (b.category === activeCategory) return 1;
     return 0;
@@ -203,21 +257,30 @@ export function RouteComparisonView() {
   return (
     <div className="flex flex-col h-full bg-[#F5F7FA]">
 
-      {/* ── Sticky Back Bar ──────────────────────────────────────── */}
-      <div className="shrink-0 flex items-center gap-2 px-4 pt-3 pb-2 bg-[#F5F7FA] border-b border-slate-200 z-10">
-        <button
-          onClick={() => setResidentTab('routes-entry')}
-          className="w-7 h-7 rounded-full bg-white border border-slate-200 flex items-center justify-center shadow-sm hover:bg-slate-50 transition"
-        >
-          <ArrowLeft className="w-3.5 h-3.5 text-slate-600" />
-        </button>
-        <div>
-          <span className="text-xs font-bold text-slate-800">Choose a Safe Route</span>
-          <span className="block text-[9px] text-slate-400 font-medium">Elmina Township · Real-time NightSafe</span>
+      {/* ── Sticky Back Bar ────────────────────────────────────────── */}
+      <div className="shrink-0 flex items-center justify-between px-4 pt-3 pb-2 bg-[#F5F7FA] border-b border-slate-200 z-10">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setResidentTab('routes-entry')}
+            className="w-7 h-7 rounded-full bg-white border border-slate-200 flex items-center justify-center shadow-sm hover:bg-slate-50 transition"
+          >
+            <ArrowLeft className="w-3.5 h-3.5 text-slate-600" />
+          </button>
+          <div>
+            <span className="text-xs font-bold text-slate-800">Choose a Safe Route</span>
+            <span className="block text-[9px] text-slate-400 font-medium">Elmina Township · Real-time NightSafe</span>
+          </div>
         </div>
+        {journeyOrigin && journeyDestination && (
+          <div className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white border border-slate-200 shadow-xs text-[9px] font-semibold text-slate-600 max-w-[170px] truncate">
+            <span className="truncate text-slate-900">{journeyOrigin.split(',')[0]}</span>
+            <span className="text-[#2864A6]">→</span>
+            <span className="truncate text-[#2864A6]">{journeyDestination.split(',')[0]}</span>
+          </div>
+        )}
       </div>
 
-      {/* ── Top Category Bar: Fastest / Safest / Shortest ────────── */}
+      {/* â”€â”€ Top Category Bar: Fastest / Safest / Shortest â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="shrink-0 bg-white px-3.5 pt-2.5 pb-2.5 border-b border-slate-200 shadow-[0_2px_4px_rgba(0,0,0,0.03)] z-10">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-1.5">
@@ -273,7 +336,7 @@ export function RouteComparisonView() {
         </div>
       </div>
 
-      {/* ── Route Google Maps Preview ────────────────────────────── */}
+      {/* â”€â”€ Route Google Maps Preview â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="shrink-0 h-44 w-full border-b border-slate-200 relative overflow-hidden bg-slate-100">
         <GoogleMapsTownshipView
           theme="day"
@@ -288,11 +351,11 @@ export function RouteComparisonView() {
           <span className={`w-2 h-2 rounded-full ${
             selected === 'A' ? 'bg-emerald-500' : selected === 'B' ? 'bg-amber-500' : 'bg-[#2864A6]'
           }`} />
-          <span className="text-[10px] font-bold text-slate-800">Route {selected} Preview · Google Maps</span>
+          <span className="text-[10px] font-bold text-slate-800">Route {selected} Preview  ·  Google Maps</span>
         </div>
       </div>
 
-      {/* ── Scrollable Route Cards ────────────────────────────────── */}
+      {/* â”€â”€ Scrollable Route Cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="flex-1 overflow-y-auto px-4 pt-3 pb-6 space-y-3.5">
         {sortedRoutes.map((route) => {
           const isSelected = selected === route.id;
@@ -311,7 +374,7 @@ export function RouteComparisonView() {
               {/* Recommended badge */}
               {route.recommended && (
                 <div className="absolute -top-2.5 left-4 px-2.5 py-0.5 rounded-full bg-emerald-600 text-white text-[9px] font-bold uppercase tracking-wider shadow-sm">
-                  ✦ Recommended
+                  âœ¦ Recommended
                 </div>
               )}
 
@@ -340,7 +403,7 @@ export function RouteComparisonView() {
                   </div>
                 </div>
 
-                {/* Stats row: ETA · Distance · Lighting */}
+                {/* Stats row: ETA  ·  Distance  ·  Lighting */}
                 <div className="flex items-center gap-0 bg-slate-50 rounded-xl overflow-hidden border border-slate-100">
                   <div className="flex-1 flex flex-col items-center py-2 border-r border-slate-100">
                     <Clock className="w-3.5 h-3.5 text-slate-400 mb-0.5" />
@@ -388,14 +451,14 @@ export function RouteComparisonView() {
                   {route.reason}
                 </p>
 
-                {/* Choose button — visible when selected */}
+                {/* Choose button  —  visible when selected */}
                 {isSelected && (
                   <button
                     onClick={(e) => { e.stopPropagation(); handleChoose(route.id); }}
                     className={`w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition active:scale-98 ${c.badge}`}
                   >
                     <Play className="w-3.5 h-3.5 fill-white" />
-                    <span>Start — {route.label} ({route.name})</span>
+                    <span>Start  —  {route.label} ({route.name})</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 )}

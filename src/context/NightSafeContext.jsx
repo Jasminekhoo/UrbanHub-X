@@ -15,6 +15,25 @@ import {
 
 const NightSafeContext = createContext();
 
+/** Strip legacy prototype suffixes from cached alert records (e.g. "Resolved — demo"). */
+function normalizeAlertRecord(alert) {
+  if (!alert) return alert;
+  const status =
+    typeof alert.status === 'string'
+      ? alert.status.replace(/\s*[—–-]\s*demo\s*$/i, '').trim()
+      : alert.status;
+  const locationFreshness =
+    typeof alert.locationFreshness === 'string'
+      ? alert.locationFreshness.replace(/Last available demo location/i, 'Last recorded location')
+      : alert.locationFreshness;
+  return {
+    ...alert,
+    status,
+    locationFreshness,
+    resident: alert.resident ? alert.resident.replace(/\s*\(Demo Resident\)/gi, '') : alert.resident
+  };
+}
+
 export function NightSafeProvider({ children }) {
   // Current demo role: 'select' | 'resident' | 'security' | 'property'
   const [role, setRole] = useState(() => {
@@ -43,6 +62,8 @@ export function NightSafeProvider({ children }) {
   const [selectedRouteId, setSelectedRouteId] = useState('A');
   const [routeCategory, setRouteCategory] = useState('safest'); // 'safest' | 'fastest' | 'shortest'
   const [journeyStatus, setJourneyStatus] = useState('idle'); // 'idle' | 'in_progress' | 'ended'
+  const [journeyOrigin, setJourneyOrigin] = useState('The Eighth, Elmina Green');
+  const [journeyDestination, setJourneyDestination] = useState('Elmina Lakeside Mall');
   const [checkpointIndex, setCheckpointIndex] = useState(0);
   const [passedCheckpoints, setPassedCheckpoints] = useState(['L-01']);
   const [missedCheckpointPrompt, setMissedCheckpointPrompt] = useState(false);
@@ -79,23 +100,19 @@ export function NightSafeProvider({ children }) {
   });
   const [duressTriggered, setDuressTriggered] = useState(false);
 
-  // Security Alerts list — seeded with demo queue on first load
+  // Security Alerts list  —  seeded with demo queue on first load
   const [alerts, setAlerts] = useState(() => {
     const saved = localStorage.getItem('ns_alerts');
     if (!saved) return INITIAL_ALERTS;
     try {
       const parsed = JSON.parse(saved);
-      // Clean any legacy cached "(Demo Resident)" strings in resident name
-      return parsed.map(a => ({
-        ...a,
-        resident: a.resident ? a.resident.replace(/\s*\(Demo Resident\)/gi, '') : a.resident
-      }));
+      return parsed.map(normalizeAlertRecord);
     } catch {
       return INITIAL_ALERTS;
     }
   });
 
-  // Hazards list — guaranteed reliable images and synchronized across all roles
+  // Hazards list  —  guaranteed reliable images and synchronized across all roles
   const [hazards, setHazards] = useState(() => {
     const saved = localStorage.getItem('ns_hazards');
     if (!saved) return INITIAL_HAZARDS;
@@ -112,7 +129,9 @@ export function NightSafeProvider({ children }) {
               feedCategory: initH.feedCategory,
               assignedPath: initH.assignedPath || existing.assignedPath,
               reportedBy: initH.reportedBy,
-              severity: existing.severity || initH.severity
+              severity: existing.severity || initH.severity,
+              upvotes: existing.upvotes ?? initH.upvotes ?? 0,
+              validatedBy: existing.validatedBy || initH.validatedBy || []
             }
           : initH;
       });
@@ -139,10 +158,30 @@ export function NightSafeProvider({ children }) {
   });
 
   // Budget Optimization (Screen M5)
-  const [budget, setBudget] = useState(5000);
+  const [budget, setBudget] = useState(() => {
+    const saved = localStorage.getItem('ns_budget');
+    return saved ? Number(saved) : 5000;
+  });
   const [optimisedPlan, setOptimisedPlan] = useState(() => solveKnapsackBudget(5000));
-  const [appliedInterventions, setAppliedInterventions] = useState([]);
-  const [planApplied, setPlanApplied] = useState(false);
+  const [appliedInterventions, setAppliedInterventions] = useState(() => {
+    const saved = localStorage.getItem('ns_applied_interventions');
+    if (!saved) return [];
+    try {
+      return JSON.parse(saved);
+    } catch {
+      return [];
+    }
+  });
+  const [planApplied, setPlanApplied] = useState(() => {
+    const saved = localStorage.getItem('ns_applied_interventions');
+    if (!saved) return false;
+    try {
+      const arr = JSON.parse(saved);
+      return Array.isArray(arr) && arr.length > 0;
+    } catch {
+      return false;
+    }
+  });
 
   // Toast notifications
   const [toast, setToast] = useState(null);
@@ -150,6 +189,34 @@ export function NightSafeProvider({ children }) {
   // Storyline Presenter Helper (Scenes 0 to 8)
   const [storylineStep, setStorylineStep] = useState(0);
   const [isStorylineDrawerOpen, setIsStorylineDrawerOpen] = useState(false);
+
+  // Cross-tab / cross-window synchronization via storage events
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (!e.newValue) return;
+      try {
+        if (e.key === 'ns_hazards') {
+          const updatedHazards = JSON.parse(e.newValue);
+          setHazards(updatedHazards);
+        } else if (e.key === 'ns_alerts') {
+          const updatedAlerts = JSON.parse(e.newValue);
+          setAlerts(updatedAlerts);
+        } else if (e.key === 'ns_checkpoints') {
+          const updatedCheckpoints = JSON.parse(e.newValue);
+          setCheckpointEvents(updatedCheckpoints);
+        } else if (e.key === 'ns_applied_interventions') {
+          const updatedPlan = JSON.parse(e.newValue);
+          setAppliedInterventions(updatedPlan);
+          setPlanApplied(updatedPlan.length > 0);
+        }
+      } catch (err) {
+        console.error('Error syncing cross-tab storage:', err);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   // Sync to local storage
   useEffect(() => {
@@ -171,6 +238,14 @@ export function NightSafeProvider({ children }) {
   useEffect(() => {
     localStorage.setItem('ns_pin_config', JSON.stringify(duressConfig));
   }, [duressConfig]);
+
+  useEffect(() => {
+    localStorage.setItem('ns_budget', String(budget));
+  }, [budget]);
+
+  useEffect(() => {
+    localStorage.setItem('ns_applied_interventions', JSON.stringify(appliedInterventions));
+  }, [appliedInterventions]);
 
   // Toast timer
   useEffect(() => {
@@ -271,9 +346,9 @@ export function NightSafeProvider({ children }) {
         resident: RESIDENT_PROFILE.title,
         residentId: 'RES-8821',
         location: 'Near Lamp L-03 (Boulevard Walkway)',
-        lastCheckpoint: 'L-02 · 9:09 PM',
+        lastCheckpoint: 'L-02  ·  9:09 PM',
         alertReceived: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        locationFreshness: 'Simulated checkpoint overdue · Prompt unconfirmed',
+        locationFreshness: 'Simulated checkpoint overdue  ·  Prompt unconfirmed',
         status: 'Awaiting security acknowledgement',
         notes: ['Automatic prompt timed out after 90 seconds in simulation.'],
         category: 'Checkpoint Overdue',
@@ -297,16 +372,30 @@ export function NightSafeProvider({ children }) {
   const triggerDuressPin = () => {
     setDuressTriggered(true);
 
-    // Create AL-204 in shared alerts
-    const duressAlert = {
-      ...DURESS_ALERT_SEED,
-      alertReceived: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    };
+    const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
+    // Look for existing active AL-204
     setAlerts(prev => {
-      // Avoid duplicate AL-204
-      const filtered = prev.filter(a => a.id !== 'AL-204');
-      return [duressAlert, ...filtered];
+      const existing = prev.find(a => a.id === 'AL-204');
+      if (existing) {
+        // Update alert received without duplicating
+        return prev.map(a => a.id === 'AL-204' ? {
+          ...a,
+          alertReceived: nowStr,
+          timestamp: nowStr,
+          status: 'Awaiting security acknowledgement'
+        } : a);
+      }
+      const duressAlert = {
+        ...DURESS_ALERT_SEED,
+        id: 'AL-204',
+        alertReceived: nowStr,
+        timestamp: nowStr,
+        status: 'Awaiting security acknowledgement',
+        isDuress: true,
+        assignedGuard: null
+      };
+      return [duressAlert, ...prev];
     });
 
     // Subtly navigate or keep resident screen neutral
@@ -314,28 +403,53 @@ export function NightSafeProvider({ children }) {
     showToast('Request received. (UI remains neutral for user safety)', 'info');
   };
 
-  // Trigger Overt SOS (Screen R7) — returns the new alert ID
-  const triggerSos = (category = 'Personal Safety') => {
-    const newId = `AL-${Date.now().toString().slice(-3)}`;
+  // Trigger Overt SOS (Screen R7) — returns the existing active or new alert ID
+  const triggerSos = (category = 'Personal Safety', specificNode = null) => {
+    // Check if an unacknowledged SOS alert already exists from this resident
+    const activeUnack = alerts.find(a => 
+      a.residentId === 'RES-8821' && 
+      !a.isDuress && 
+      (a.status === 'Awaiting security acknowledgement' || a.status === 'Response in progress')
+    );
+    if (activeUnack) {
+      showToast(`Active SOS alert ${activeUnack.id} is already in progress.`, 'warning');
+      return activeUnack.id;
+    }
+
+    const route = SCHEMATIC_ROUTES[selectedRouteId] || SCHEMATIC_ROUTES.A;
+    const currentNode = specificNode || route.nodes[checkpointIndex] || 'L-04';
+    const nodeObj = SCHEMATIC_NODES.find(n => n.id === currentNode);
+    const locName = nodeObj ? `${nodeObj.name} (${currentNode})` : `Near Lamp ${currentNode}`;
+
+    // Generate unique stable ID
+    const existingNums = alerts
+      .map(a => parseInt(a.id?.replace(/[^0-9]/g, ''), 10))
+      .filter(n => !isNaN(n));
+    const maxNum = existingNums.length > 0 ? Math.max(...existingNums, 204) : 204;
+    const newId = `AL-${maxNum + 1}`;
+
+    const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
     const newAlert = {
       id: newId,
       type: 'Emergency SOS Alert',
       severity: 'High',
       resident: RESIDENT_PROFILE.title,
       residentId: 'RES-8821',
-      location: 'Near Lamp L-04 (Boulevard)',
-      lastCheckpoint: 'L-03 · 9:12 PM',
-      alertReceived: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      locationFreshness: 'Last available demo location — not live tracking',
+      location: locName,
+      lastCheckpoint: `${currentNode} · ${nowStr}`,
+      alertReceived: nowStr,
+      locationFreshness: 'Simulated checkpoint fix — live tracking active',
       status: 'Awaiting security acknowledgement',
+      assignedGuard: null,
       notes: [],
       category,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      timestamp: nowStr,
       isDuress: false
     };
 
     setAlerts(prev => [newAlert, ...prev]);
-    showToast(`Demo SOS alert ${newId} dispatched to Security Operations.`, 'warning');
+    showToast(`Emergency SOS alert ${newId} dispatched to Security Operations.`, 'warning');
     return newId;
   };
 
@@ -395,29 +509,101 @@ export function NightSafeProvider({ children }) {
     showToast(`Arrived at Node ${nextNodeId}. Please confirm your safety.`, 'info');
   };
 
+  // Toggle community hazard validation / upvote
+  const toggleHazardValidation = (hazardId, residentId = RESIDENT_PROFILE.id || 'RES-8821') => {
+    let outcome = 'added';
+    setHazards(prev => prev.map(h => {
+      if (h.id !== hazardId) return h;
+      const validatedList = Array.isArray(h.validatedBy) ? h.validatedBy : [];
+      const hasValidated = validatedList.includes(residentId);
+      const currentVotes = typeof h.upvotes === 'number' ? h.upvotes : 0;
+      
+      const newVotes = hasValidated ? Math.max(0, currentVotes - 1) : currentVotes + 1;
+      const newList = hasValidated
+        ? validatedList.filter(id => id !== residentId)
+        : [...validatedList, residentId];
+      
+      outcome = hasValidated ? 'removed' : 'added';
+
+      // Dynamically compute evidence confidence based on validations & status
+      let newConfidence = h.evidenceConfidence || 'Medium';
+      if (newVotes >= 10 || h.figureUrl) {
+        newConfidence = 'High';
+      } else if (newVotes >= 3) {
+        newConfidence = 'Medium';
+      } else {
+        newConfidence = 'Low';
+      }
+
+      return {
+        ...h,
+        upvotes: newVotes,
+        validatedBy: newList,
+        evidenceConfidence: newConfidence
+      };
+    }));
+
+    if (outcome === 'added') {
+      showToast('Thank you for confirming this community hazard report!', 'success');
+    } else {
+      showToast('Hazard confirmation removed.', 'info');
+    }
+  };
+
   // Submit hazard report (Scene 5 - Screen R9)
-  const submitHazardReport = ({ category, location, severity, description, title, contactInfo, affectedNode = 'L-04' }) => {
-    const nextNum = hazards.length + 101;
-    const newId = `HZ-${nextNum}`;
+  const submitHazardReport = ({ category, location, severity, description, title, contactInfo, affectedNode = 'L-04', figureUrl = null, figureCaption = null }) => {
+    // Generate unique stable ID by taking max existing HZ number + 1
+    const existingNums = hazards
+      .map(h => parseInt(h.id?.replace(/[^0-9]/g, ''), 10))
+      .filter(n => !isNaN(n));
+    const maxNum = existingNums.length > 0 ? Math.max(...existingNums, 107) : 107;
+    const newId = `HZ-${maxNum + 1}`;
+
+    // Map canonical feedCategory from category or title
+    const text = ((category || '') + ' ' + (title || '')).toLowerCase();
+    let feedCategory = 'Environmental Hazard';
+    if (text.includes('path') || text.includes('pavement') || text.includes('paver')) feedCategory = 'Damaged Path';
+    else if (text.includes('vegetation') || text.includes('sightline') || text.includes('vege') || text.includes('hedge')) feedCategory = 'Overgrown Vege';
+    else if (text.includes('light') || text.includes('lamp') || text.includes('illumination')) feedCategory = 'Light Broken';
+
+    // Infer affected route based on node
+    const routesAffected = [];
+    Object.entries(SCHEMATIC_ROUTES).forEach(([rId, rData]) => {
+      if (rData.nodes?.includes(affectedNode)) routesAffected.push(rId);
+    });
+    if (routesAffected.length === 0) routesAffected.push('A');
+
+    const defaultImages = {
+      'Light Broken': '/broken-street-light-2.jpeg',
+      'Damaged Path': '/damaged-pathway-2.jpeg',
+      'Overgrown Vege': '/overgrown-vegetation-2.jpeg'
+    };
 
     const newHazard = {
       id: newId,
       title: title || `${category.split('/')[0].trim()} at ${location}`,
       category,
+      feedCategory,
       location,
       contactInfo: contactInfo || '',
       affectedNode,
-      routesAffected: affectedNode === 'L-04' ? ['A'] : ['B'],
-      severity,
+      assignedPath: `Route ${routesAffected[0]}`,
+      routesAffected,
+      severity: severity || 'Medium',
       pedestrianExposure: 'High',
       urgency: severity === 'High' ? 'High' : 'Medium',
-      evidenceConfidence: 'Medium',
+      evidenceConfidence: figureUrl ? 'High' : 'Medium',
       status: 'Reported',
+      reportDate: 'Today',
+      upvotes: 1,
+      validatedBy: [RESIDENT_PROFILE.id || 'RES-8821'],
       source: 'Resident report',
-      timestamp: 'Just now',
-      reportedBy: RESIDENT_PROFILE.title,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      reportedBy: RESIDENT_PROFILE.title || 'Aina (Resident)',
       description: description || 'Reported by resident via mobile prototype form.',
-      estimatedCost: 1500,
+      figureUrl: figureUrl || defaultImages[feedCategory] || '/broken-street-light-2.jpeg',
+      figureCaption: figureCaption || `Resident photo evidence at node ${affectedNode}`,
+      estimatedCost: severity === 'High' ? 2200 : 1200,
       pairedInterventionId: null
     };
 
@@ -437,6 +623,20 @@ export function NightSafeProvider({ children }) {
     showToast(`Alert ${alertId} acknowledged by Duty Security Lead.`, 'success');
   };
 
+  const assignGuardToAlert = (alertId, guardId, guardName) => {
+    const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    setAlerts(prev => prev.map(a => {
+      if (a.id !== alertId) return a;
+      return {
+        ...a,
+        assignedGuard: guardName,
+        status: 'Response in progress',
+        notes: [...(a.notes || []), `${now} — Dispatch: ${guardName} assigned to respond at ${a.location}.`]
+      };
+    }));
+    showToast(`${guardName} assigned and dispatched to ${alertId}.`, 'success');
+  };
+
   const markResponseInProgress = (alertId) => {
     setAlerts(prev => prev.map(a => 
       a.id === alertId ? { ...a, status: 'Response in progress' } : a
@@ -450,7 +650,7 @@ export function NightSafeProvider({ children }) {
       if (a.id !== alertId) return a;
       return {
         ...a,
-        notes: [...(a.notes || []), `${now} — Officer: ${noteText}`]
+        notes: [...(a.notes || []), `${now}  —  Officer: ${noteText}`]
       };
     }));
     showToast('Incident audit note appended.', 'success');
@@ -458,9 +658,9 @@ export function NightSafeProvider({ children }) {
 
   const resolveAlert = (alertId) => {
     setAlerts(prev => prev.map(a => 
-      a.id === alertId ? { ...a, status: 'Resolved — demo' } : a
+      a.id === alertId ? { ...a, status: 'Resolved' } : a
     ));
-    showToast(`Alert ${alertId} marked as 'Resolved — demo'.`, 'info');
+    showToast(`Alert ${alertId} marked as 'Resolved'.`, 'info');
   };
 
   // -------------------------------------------------------------
@@ -531,6 +731,8 @@ export function NightSafeProvider({ children }) {
     localStorage.removeItem('ns_hazards');
     localStorage.removeItem('ns_checkpoints');
     localStorage.removeItem('ns_pin_config');
+    localStorage.removeItem('ns_budget');
+    localStorage.removeItem('ns_applied_interventions');
 
     showToast('Demo scenario reset to initial clean state.', 'info');
   };
@@ -569,6 +771,10 @@ export function NightSafeProvider({ children }) {
         routeCategory,
         setRouteCategory,
         journeyStatus,
+        journeyOrigin,
+        setJourneyOrigin,
+        journeyDestination,
+        setJourneyDestination,
         checkpointIndex,
         passedCheckpoints,
         missedCheckpointPrompt,
@@ -596,9 +802,11 @@ export function NightSafeProvider({ children }) {
         cancelUnsafeAssistance,
         triggerWalkingDemo,
         submitHazardReport,
+        toggleHazardValidation,
 
         // Security Actions
         acknowledgeAlert,
+        assignGuardToAlert,
         markResponseInProgress,
         addAlertNote,
         resolveAlert,

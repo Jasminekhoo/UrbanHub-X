@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { loadGoogleMapsScript, resetGoogleMapsLoader, isGoogleMapsReady } from '../utils/googleMapsLoader';
 import { ELMINA_CENTER, NODE_COORDINATES, ROUTE_GPS_PATHS, HAZARD_COORDINATES } from '../data/elminaGeoData';
+import { findPedestrianRoute } from '../utils/pedestrianRouter';
 import { SchematicTownshipMap } from './SchematicTownshipMap';
 
 export function GoogleMapsTownshipView({
@@ -24,6 +25,8 @@ export function GoogleMapsTownshipView({
   const markersRef = useRef([]);
   const polylinesRef = useRef([]);
   const circlesRef = useRef([]);
+  const directionsRendererRef = useRef(null);
+  const [routeStatus, setRouteStatus] = useState('idle'); // 'idle' | 'loading' | 'ok' | 'local_graph' | 'unavailable'
 
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
   // 'idle' | 'loading' | 'loaded' | 'error' | 'no_key'
@@ -140,69 +143,82 @@ export function GoogleMapsTownshipView({
     polylinesRef.current = [];
     circlesRef.current.forEach((c) => c.setMap(null));
     circlesRef.current = [];
+    if (directionsRendererRef.current) {
+      directionsRendererRef.current.setMap(null);
+      directionsRendererRef.current = null;
+    }
+  };
+
+  const drawLocalPedestrianRoute = (maps, map, startPin, endPin) => {
+    if (!startPin || !endPin) return;
+    const result = findPedestrianRoute(
+      { lat: startPin.lat, lng: startPin.lng },
+      { lat: endPin.lat, lng: endPin.lng }
+    );
+    if (result && result.path && result.path.length >= 2) {
+      const polyline = new maps.Polyline({
+        path: result.path,
+        geodesic: true,
+        strokeColor: '#2864A6',
+        strokeOpacity: 0.9,
+        strokeWeight: 5,
+        map,
+        zIndex: 15,
+      });
+      polylinesRef.current.push(polyline);
+      setRouteStatus('local_graph');
+    } else {
+      setRouteStatus('unavailable');
+    }
   };
 
   const renderOverlays = (maps, map) => {
     clearMapObjects();
 
     if (simpleMode) {
-      // ── Simple mode: just origin/destination pins ──────────────────────────
+      // ── Simple mode: origin/destination clean standard pins + walking route ──
       if (fromPin) {
+        // Standard, clean origin pin (SVG map pin icon)
         const marker = new maps.Marker({
           position: { lat: fromPin.lat, lng: fromPin.lng },
           map,
           title: fromPin.label || 'Origin',
           zIndex: 20,
           icon: {
-            path: maps.SymbolPath.CIRCLE,
-            scale: 9,
+            path: 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z',
             fillColor: '#2864A6',
             fillOpacity: 1,
             strokeColor: '#ffffff',
-            strokeWeight: 2.5,
+            strokeWeight: 1.5,
+            scale: 1.3,
+            anchor: new maps.Point(12, 22),
           },
         });
         markersRef.current.push(marker);
       }
 
       if (toPin) {
+        // Standard, clean destination pin (SVG map pin icon)
         const marker = new maps.Marker({
           position: { lat: toPin.lat, lng: toPin.lng },
           map,
           title: toPin.label || 'Destination',
           zIndex: 20,
           icon: {
-            path: maps.SymbolPath.BACKWARD_CLOSED_ARROW,
-            scale: 6,
+            path: 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z',
             fillColor: '#ef4444',
             fillOpacity: 1,
             strokeColor: '#ffffff',
-            strokeWeight: 2,
+            strokeWeight: 1.5,
+            scale: 1.4,
+            anchor: new maps.Point(12, 22),
           },
         });
         markersRef.current.push(marker);
       }
 
-      // Draw a dashed line between the two pins
-      if (fromPin && toPin) {
-        const line = new maps.Polyline({
-          path: [
-            { lat: fromPin.lat, lng: fromPin.lng },
-            { lat: toPin.lat, lng: toPin.lng },
-          ],
-          geodesic: true,
-          strokeColor: '#2864A6',
-          strokeOpacity: 0,
-          strokeWeight: 0,
-          icons: [{
-            icon: { path: 'M 0,-1 0,1', strokeOpacity: 0.8, strokeWeight: 2.5, strokeColor: '#2864A6', scale: 4 },
-            offset: '0',
-            repeat: '16px',
-          }],
-          map,
-        });
-        polylinesRef.current.push(line);
-      }
+      // In simpleMode (location picker), only show the origin and destination pins without any route line
+      setRouteStatus('idle');
       return;
     }
 
@@ -351,6 +367,14 @@ export function GoogleMapsTownshipView({
         <div className="absolute inset-0 bg-slate-100 flex flex-col items-center justify-center gap-2 z-10">
           <div className="w-8 h-8 border-2 border-[#2864A6] border-t-transparent rounded-full animate-spin" />
           <span className="text-xs text-slate-500 font-medium">Loading map…</span>
+        </div>
+      )}
+
+      {/* Route calculation & pedestrian status badges */}
+      {simpleMode && routeStatus === 'unavailable' && (
+        <div className="absolute bottom-2 left-2 z-10 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-600/90 text-white shadow-md backdrop-blur-sm">
+          <span className="w-1.5 h-1.5 rounded-full bg-white" />
+          <span className="text-[10px] font-semibold">Walking route unavailable between selected points</span>
         </div>
       )}
     </div>

@@ -31,6 +31,8 @@ export function JourneyPreviewView() {
     missedCheckpointPrompt,
     resolveMissedPrompt,
     triggerWalkingDemo,
+    journeyOrigin,
+    journeyDestination,
   } = useNightSafe();
 
   const route = routes[selectedRouteId] || routes.A;
@@ -79,8 +81,10 @@ export function JourneyPreviewView() {
                 (Route {selectedRouteId})
               </span>
             </div>
-            <div className="text-[10px] text-slate-500">
-              Live Path Navigation · Node {currentNodeId}
+            <div className="text-[10px] text-slate-500 truncate">
+              {journeyOrigin && journeyDestination
+                ? `${journeyOrigin.split(',')[0]} → ${journeyDestination.split(',')[0]}`
+                : `Live Path Navigation · Node ${currentNodeId}`}
             </div>
           </div>
         </div>

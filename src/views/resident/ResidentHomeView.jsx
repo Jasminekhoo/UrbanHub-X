@@ -21,19 +21,13 @@ import {
 import { getHazardImage } from '../../assets/hazardImages';
 
 export function ResidentHomeView() {
-  const { hazards, showToast } = useNightSafe();
+  const { hazards, toggleHazardValidation, residentProfile } = useNightSafe();
+  const currentResidentId = residentProfile?.id || 'RES-8821';
 
-  const [upvotes, setUpvotes] = useState({ 'HZ-103': 22, 'HZ-102': 8, 'HZ-101': 14 });
-  const [upvotedItems, setUpvotedItems] = useState({});
   const [selectedCategory, setSelectedCategory] = useState('All');
 
   const handleToggleUpvote = (id) => {
-    const isUpvoted = upvotedItems[id];
-    setUpvotedItems(prev => ({ ...prev, [id]: !isUpvoted }));
-    setUpvotes(prev => ({ ...prev, [id]: (prev[id] || 0) + (isUpvoted ? -1 : 1) }));
-    if (!isUpvoted && showToast) {
-      showToast('Thank you for confirming this community hazard report!', 'success');
-    }
+    toggleHazardValidation(id, currentResidentId);
   };
 
   const getCleanCategoryName = (item) => {
@@ -62,7 +56,8 @@ export function ResidentHomeView() {
       text.includes('sightline') ||
       text.includes('light') ||
       text.includes('lamp') ||
-      ['hz-101', 'hz-102', 'hz-103', 'hz-104', 'hz-105', 'hz-106', 'hz-107'].includes(h.id?.toLowerCase())
+      h.feedCategory ||
+      h.category
     );
   });
 
@@ -162,8 +157,8 @@ export function ResidentHomeView() {
     return true;
   }).sort((a, b) => {
     if (sortOrder === 'hottest') {
-      const countA = upvotes[a.id] || 0;
-      const countB = upvotes[b.id] || 0;
+      const countA = a.upvotes || 0;
+      const countB = b.upvotes || 0;
       if (countB !== countA) return countB - countA;
     } else {
       // 'latest': sort by reportDate / timestamp descending
@@ -497,11 +492,11 @@ export function ResidentHomeView() {
       {/* Feed Cards */}
       <div className="space-y-4">
         {filteredHazards.map((item, index) => {
-          const count = upvotes[item.id] || 0;
-          const hasUpvoted = upvotedItems[item.id];
+          const count = typeof item.upvotes === 'number' ? item.upvotes : 0;
+          const hasUpvoted = Array.isArray(item.validatedBy) && item.validatedBy.includes(currentResidentId);
           const authorName = getAuthorDisplay(item);
           const isAnonymous = authorName.toLowerCase().includes('anonymous');
-          const cleanTime = (item.timestamp || '').replace(/·.*$/g, '').trim();
+          const cleanTime = (item.timestamp || '').replace(/ · .*$/g, '').trim();
           const imgSrc = item.figureUrl || getHazardImage(item);
 
           return (
@@ -509,7 +504,7 @@ export function ResidentHomeView() {
               key={item.id}
               className="rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden"
             >
-              {/* Figure — full-width photo */}
+              {/* Figure  —  full-width photo */}
               <div className="relative bg-slate-900 overflow-hidden">
                 <img
                   src={imgSrc}
@@ -541,7 +536,7 @@ export function ResidentHomeView() {
 
               {/* Card Body */}
               <div className="p-4 space-y-3">
-                {/* Author & Date/Time Row — Date and Time together at same level */}
+                {/* Author & Date/Time Row  —  Date and Time together at same level */}
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   {/* Resident Name / Anonymous */}
                   <div className="flex items-center gap-2 min-w-0">
@@ -560,7 +555,7 @@ export function ResidentHomeView() {
                   <div className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium shrink-0">
                     <Calendar className="w-3.5 h-3.5 text-slate-400" />
                     <span>{item.reportDate || '18 Oct 2026'}</span>
-                    <span className="text-slate-300">·</span>
+                    <span className="text-slate-300"> · </span>
                     <Clock className="w-3.5 h-3.5 text-slate-400" />
                     <span>{cleanTime}</span>
                   </div>

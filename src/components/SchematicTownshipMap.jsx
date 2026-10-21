@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { SCHEMATIC_NODES, SCHEMATIC_ROUTES } from '../data/nightSafeData';
 import { AlertTriangle, Lightbulb, MapPin, Eye, AlertCircle, ShieldAlert, Layers, ChevronDown } from 'lucide-react';
 
@@ -36,8 +36,8 @@ export function SchematicTownshipMap({
   const routeCPath = "M 80 280 C 180 260, 380 260, 580 350 L 740 240";
 
   // Active emergency alert check
-  const hasEmergency = alerts.some(a => a.status !== 'Resolved — demo');
-  const emergencyAlert = alerts.find(a => a.status !== 'Resolved — demo');
+  const hasEmergency = alerts.some(a => a.status !== 'Resolved');
+  const emergencyAlert = alerts.find(a => a.status !== 'Resolved');
 
   return (
     <div className={`relative rounded-xl overflow-hidden border ${isNight ? 'bg-[#0D1726] border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'} transition-colors duration-300 shadow-sm flex flex-col`}>
@@ -48,11 +48,11 @@ export function SchematicTownshipMap({
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
             <span className="font-semibold tracking-wide uppercase">Schematic Township Layout</span>
             <span className="text-[11px] px-2 py-0.5 rounded bg-slate-200/50 dark:bg-slate-800 text-slate-500">
-              {isNight ? 'Night Corridor Mode' : 'Technical Operations Grid'}
+              {isNight ? 'Night Corridor Mode' : 'Simulated Demo Layout'}
             </span>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-[11px] text-slate-400">Scale: Fictional Prototype</span>
+            <span className="text-[11px] text-slate-400">Simulated Demo — not real-world verified</span>
           </div>
         </div>
       )}
@@ -112,7 +112,7 @@ export function SchematicTownshipMap({
             {/* Residential parcel */}
             <rect x="20" y="210" width="100" height="150" rx="12" fill={isNight ? '#1e293b' : '#e2e8f0'} />
             <text x="70" y="270" fill={isNight ? '#94a3b8' : '#475569'} fontSize="10" textAnchor="middle" fontWeight="bold">RESIDENCE</text>
-            <text x="70" y="285" fill={isNight ? '#64748b' : '#64748b'} fontSize="9" textAnchor="middle">BLOCK A–C</text>
+            <text x="70" y="285" fill={isNight ? '#64748b' : '#64748b'} fontSize="9" textAnchor="middle">BLOCK Aâ€“C</text>
 
             {/* Transit Hub parcel */}
             <rect x="710" y="170" width="90" height="140" rx="12" fill={isNight ? '#1e293b' : '#e2e8f0'} />
@@ -193,7 +193,7 @@ export function SchematicTownshipMap({
               fill={selectedRoute === 'A' ? '#F4B942' : (isNight ? '#64748b' : '#64748b')}
               className="transition-colors"
             >
-              Route A: Main Avenue (9 min · Model Cost 31)
+              Route A: Main Avenue (9 min Â· Model Cost 31)
             </text>
 
             {/* Route B Label */}
@@ -203,7 +203,7 @@ export function SchematicTownshipMap({
               fill={selectedRoute === 'B' ? '#F4B942' : (isNight ? '#64748b' : '#64748b')}
               className="transition-colors"
             >
-              Route B: Garden Shortcut (6 min · Model Cost 43)
+              Route B: Garden Shortcut (6 min Â· Model Cost 43)
             </text>
 
             {/* Route C Label */}
@@ -213,7 +213,7 @@ export function SchematicTownshipMap({
               fill={selectedRoute === 'C' ? '#F4B942' : (isNight ? '#64748b' : '#64748b')}
               className="transition-colors"
             >
-              Route C: Courtyard Link (8 min · Shortest 520m)
+              Route C: Courtyard Link (8 min Â· Shortest 520m)
             </text>
           </g>
 
@@ -430,7 +430,7 @@ export function SchematicTownshipMap({
           )}
         </svg>
 
-        {/* Collapsible Map Legend — collapsed by default so the canvas is unobstructed */}
+        {/* Collapsible Map Legend â€” collapsed by default so the canvas is unobstructed */}
         {showLegend && (
           <div className="absolute bottom-3 left-3 z-20 flex flex-col items-start gap-1.5">
             {legendOpen && (
@@ -484,7 +484,7 @@ export function SchematicTownshipMap({
 
         {/* Disclaimer water-mark */}
         <div className="absolute top-2 right-3 text-[10px] text-slate-400 opacity-75 font-mono select-none pointer-events-none">
-          Simulated Township Topology · Demo Only
+          Simulated Township Topology Â· Demo Only
         </div>
       </div>
     </div>

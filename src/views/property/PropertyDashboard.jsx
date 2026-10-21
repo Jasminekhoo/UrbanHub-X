@@ -5,7 +5,8 @@ import {
   SCHEMATIC_NODES,
   SCHEMATIC_ROUTES,
   CANDIDATE_INTERVENTIONS,
-  calculateRouteCost
+  calculateRouteCost,
+  calculateHazardPriorityScore
 } from '../../data/nightSafeData';
 import {
   Building2,
@@ -39,7 +40,7 @@ import {
 } from 'lucide-react';
 
 // The eight M-screens collapsed into three logical nav sections.
-// `propertyTab` stays the single source of truth — this is presentation only.
+// `propertyTab` stays the single source of truth  —  this is presentation only.
 const NAV_GROUPS = [
   {
     id: 'overview-map',
@@ -107,7 +108,7 @@ export function PropertyDashboard() {
   const BTN_SECONDARY =
     'rounded-lg bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs border border-slate-300 shadow-sm inline-flex items-center justify-center gap-2 transition-colors';
 
-  // Which nav section owns the current tab (derived — no extra state to desync)
+  // Which nav section owns the current tab (derived  —  no extra state to desync)
   const activeGroup =
     NAV_GROUPS.find(g => g.items.some(i => i.id === propertyTab)) || NAV_GROUPS[0];
 
@@ -244,7 +245,7 @@ export function PropertyDashboard() {
     { label: 'High-Priority Items', value: highPriority, hint: 'Require Mitigation', valueTone: 'text-[#C83E4D]', hintTone: 'text-red-600' },
     { label: 'Awaiting Verification', value: awaitingVerification, hint: 'Grounds Check Queue', valueTone: 'text-amber-600', hintTone: 'text-amber-600' },
     { label: 'Illustrative Budget', value: `RM ${budget.toLocaleString()}`, hint: 'Default Allocation', valueTone: 'text-[#2864A6]', hintTone: 'text-sky-600' },
-    { label: 'Modelled Route Cost ΔC', value: planApplied ? `-${routeACost.delta} pts` : '0 pts', hint: planApplied ? 'Plan Applied to Simulation' : 'Pending Plan Application', valueTone: 'text-emerald-600', hintTone: 'text-emerald-600' }
+    { label: 'Modelled Route Cost Î”C', value: planApplied ? `-${routeACost.delta} pts` : '0 pts', hint: planApplied ? 'Plan Applied to Simulation' : 'Pending Plan Application', valueTone: 'text-emerald-600', hintTone: 'text-emerald-600' }
   ];
 
   // Filtered reports
@@ -256,15 +257,9 @@ export function PropertyDashboard() {
     return matchesSearch && matchesCategory;
   });
 
-  // Calculate weighted priority score (Screen M4)
+  // Calculate weighted priority score (Screen M4) via shared formula
   const calculatePriorityScore = (item) => {
-    const sevScore = item.severity === 'High' ? 10 : item.severity === 'Medium' ? 6 : 3;
-    const expScore = item.pedestrianExposure === 'High' ? 10 : item.pedestrianExposure === 'Medium' ? 6 : 3;
-    const urgScore = item.urgency === 'High' ? 10 : item.urgency === 'Medium' ? 6 : 3;
-
-    const totalWeight = priorityWeights.severity + priorityWeights.exposure + priorityWeights.urgency;
-    const weighted = (sevScore * priorityWeights.severity + expScore * priorityWeights.exposure + urgScore * priorityWeights.urgency) / (totalWeight || 1);
-    return Math.round(weighted * 10);
+    return calculateHazardPriorityScore(item, priorityWeights);
   };
 
   // Sorted ranked hazards for Screen M4
@@ -304,8 +299,8 @@ export function PropertyDashboard() {
                   <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-[#142B4A] border border-slate-200">
                     {activeHazard?.feedCategory || activeHazard?.category || 'Hazard'}
                   </span>
-                  <span className="text-xs text-slate-400">·</span>
-                  <span className="text-xs font-medium text-slate-500">Reported on {activeHazard?.reportDate || '18 Oct 2026'} at {(activeHazard?.timestamp || '8:42 PM').replace(/[\s·•].*demo.*/i, '').trim()}</span>
+                  <span className="text-xs text-slate-400"> · </span>
+                  <span className="text-xs font-medium text-slate-500">Reported on {activeHazard?.reportDate || '18 Oct 2026'} at {(activeHazard?.timestamp || '8:42 PM').replace(/[\s ·  • ].*demo.*/i, '').trim()}</span>
                 </div>
                 <h2 className="text-xl font-bold text-slate-900 leading-snug">{activeHazard?.title}</h2>
                 <div className="flex items-center gap-1.5 text-xs text-slate-500 pt-0.5">
@@ -373,7 +368,12 @@ export function PropertyDashboard() {
 
                     {/* Confidence dropdown */}
                     <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-center flex flex-col justify-between">
-                      <span className="text-[10px] font-bold text-slate-400 block mb-1">Confidence</span>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[10px] font-bold text-slate-400">Confidence</span>
+                        <span className="text-[9px] font-bold text-sky-600 bg-sky-50 px-1 py-0.2 rounded">
+                          👍 {activeHazard?.upvotes || 0}
+                        </span>
+                      </div>
                       <select
                         value={activeHazard?.evidenceConfidence || 'High'}
                         onChange={(e) => {
@@ -508,7 +508,7 @@ export function PropertyDashboard() {
                   <div className="px-3 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
                     <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
                       <MapPin className="w-3.5 h-3.5 text-[#2864A6]" />
-                      <span>Hazard Geolocation · Google Maps</span>
+                      <span>Hazard Geolocation  ·  Google Maps</span>
                     </span>
                     <span className="text-[10px] text-slate-500 font-mono">{activeHazard?.affectedNode || 'Node'}</span>
                   </div>
@@ -568,7 +568,7 @@ export function PropertyDashboard() {
               </div>
             </div>
 
-            {/* Navigation Links — 8 screens grouped into 3 sections */}
+            {/* Navigation Links  —  8 screens grouped into 3 sections */}
             <nav className="space-y-1.5 text-xs font-semibold">
               {NAV_GROUPS.map((group) => {
                 const GroupIcon = group.icon;
@@ -685,7 +685,7 @@ export function PropertyDashboard() {
                     className="text-xs text-[#2864A6] font-semibold hover:underline flex items-center gap-1"
                   >
                     <Maximize2 className="w-3 h-3" />
-                    Open Detailed Map →
+                    Open Detailed Map â†’
                   </button>
                 </div>
 
@@ -706,7 +706,7 @@ export function PropertyDashboard() {
                     onClick={() => setPropertyTab('ranking')}
                     className="text-xs text-[#2864A6] font-semibold hover:underline"
                   >
-                    All Ranked ({rankedHazards.length}) →
+                    All Ranked ({rankedHazards.length}) â†’
                   </button>
                 </div>
 
@@ -800,7 +800,7 @@ export function PropertyDashboard() {
                         <td className="py-2.5 px-3 font-mono font-bold text-slate-800">{h.id}</td>
                         <td className="py-2.5 px-3">
                           <div className="font-semibold text-slate-900">{h.title}</div>
-                          <div className="text-[10px] text-slate-400">{h.category} · {h.timestamp}</div>
+                          <div className="text-[10px] text-slate-400">{h.category}  ·  {h.timestamp}</div>
                         </td>
                         <td className="py-2.5 px-3 text-slate-700 font-medium">{h.location}</td>
                         <td className="py-2.5 px-3">
@@ -840,7 +840,7 @@ export function PropertyDashboard() {
                             }}
                             className="px-3 py-1.5 rounded-lg bg-[#1F9D8B] hover:bg-[#178270] text-white font-bold text-[10px] transition-colors"
                           >
-                            View in Inspector →
+                            View in Inspector â†’
                           </button>
                         </td>
                       </tr>
@@ -926,7 +926,7 @@ export function PropertyDashboard() {
                     <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
                       Dynamic Ranked Interventions Queue
                     </h4>
-                    <span className="text-[11px] text-slate-400">Score = (Sev × Ws + Exp × We + Urg × Wu) / 100</span>
+                    <span className="text-[11px] text-slate-400">Score = (Sev Ã— Ws + Exp Ã— We + Urg Ã— Wu) / 100</span>
                   </div>
 
                   <div className="overflow-x-auto">
@@ -1001,7 +1001,7 @@ export function PropertyDashboard() {
 
                     return (
                       <div className="space-y-4 text-xs">
-                        {/* Header — score big, no gray label */}
+                        {/* Header  —  score big, no gray label */}
                         <div className="border-b pb-3 space-y-1">
                           <span className={`text-3xl font-black tabular-nums ${
                             score >= 70 ? 'text-red-600' :
@@ -1029,12 +1029,12 @@ export function PropertyDashboard() {
                                 currentItem.severity === 'High' ? 'text-red-700' :
                                 currentItem.severity === 'Low' ? 'text-emerald-700' :
                                 'text-amber-700'
-                              }>Severity — {currentItem.severity}</span>
+                              }>Severity  —  {currentItem.severity}</span>
                               <span className="text-slate-500 font-mono">Wt: {priorityWeights.severity}%</span>
                             </div>
                             <p className="text-[10px] text-slate-600">
                               {currentItem.severity === 'High'
-                                ? 'Critical risk — direct safety threat to night commuters. Immediate intervention warranted.'
+                                ? 'Critical risk  —  direct safety threat to night commuters. Immediate intervention warranted.'
                                 : currentItem.severity === 'Medium'
                                 ? 'Moderate impediment. Escalation likely if not addressed within scheduled maintenance cycle.'
                                 : 'Low immediate threat. Monitor and bundle with routine upkeep to minimise mobilisation cost.'}
@@ -1052,12 +1052,12 @@ export function PropertyDashboard() {
                                 currentItem.pedestrianExposure === 'High' ? 'text-red-700' :
                                 currentItem.pedestrianExposure === 'Low' ? 'text-emerald-700' :
                                 'text-amber-700'
-                              }>Exposure — {currentItem.pedestrianExposure}</span>
+                              }>Exposure  —  {currentItem.pedestrianExposure}</span>
                               <span className="text-slate-500 font-mono">Wt: {priorityWeights.exposure}%</span>
                             </div>
                             <p className="text-[10px] text-slate-600">
                               {currentItem.pedestrianExposure === 'High'
-                                ? 'High-volume corridor — serves peak resident foot traffic between residential clusters and transit nodes.'
+                                ? 'High-volume corridor  —  serves peak resident foot traffic between residential clusters and transit nodes.'
                                 : currentItem.pedestrianExposure === 'Medium'
                                 ? 'Moderate usage path. Impacts evening commuters but alternative routes are available nearby.'
                                 : 'Low foot traffic zone. Impact is localised; deprioritise relative to high-exposure nodes.'}
@@ -1075,12 +1075,12 @@ export function PropertyDashboard() {
                                 currentItem.urgency === 'High' ? 'text-red-700' :
                                 currentItem.urgency === 'Low' ? 'text-emerald-700' :
                                 'text-amber-700'
-                              }>Urgency — {currentItem.urgency}</span>
+                              }>Urgency  —  {currentItem.urgency}</span>
                               <span className="text-slate-500 font-mono">Wt: {priorityWeights.urgency}%</span>
                             </div>
                             <p className="text-[10px] text-slate-600">
                               {currentItem.urgency === 'High'
-                                ? 'Time-sensitive — requires action before the next wet-weather night cycle to prevent liability exposure.'
+                                ? 'Time-sensitive  —  requires action before the next wet-weather night cycle to prevent liability exposure.'
                                 : currentItem.urgency === 'Medium'
                                 ? 'Scheduled response adequate. Should be resolved within the current maintenance quarter.'
                                 : 'No immediate timeline pressure. Can be deferred to the next planned walkway inspection round.'}
@@ -1100,7 +1100,7 @@ export function PropertyDashboard() {
                               ? 'Multiple corroborating reports with photo evidence. Findings are reliable for immediate action.'
                               : currentItem.evidenceConfidence === 'Medium'
                               ? 'Partially verified. On-site inspection recommended before mobilising resources.'
-                              : 'Single source report. Held in verification queue — not suppressed, but requires ground-truth confirmation.'}
+                              : 'Single source report. Held in verification queue  —  not suppressed, but requires ground-truth confirmation.'}
                           </p>
                         </div>
 
@@ -1108,7 +1108,7 @@ export function PropertyDashboard() {
                           onClick={() => setPropertyTab('budget')}
                           className="w-full py-2 px-3 rounded-lg bg-[#2864A6] hover:bg-[#1E3C66] text-white text-xs font-bold shadow flex items-center justify-center gap-1.5 transition"
                         >
-                          <span>Inspect in Budget Optimiser →</span>
+                          <span>Inspect in Budget Optimiser â†’</span>
                         </button>
                       </div>
                     );
@@ -1296,7 +1296,7 @@ export function PropertyDashboard() {
                   </button>
                 </div>
 
-                {/* ── ALTERNATIVE PACKAGES SELECTION ON TOP ── */}
+                {/* â”€â”€ ALTERNATIVE PACKAGES SELECTION ON TOP â”€â”€ */}
                 <div className="p-6 rounded-xl bg-white border border-slate-200 shadow-sm space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
@@ -1462,7 +1462,7 @@ export function PropertyDashboard() {
                   </div>
                 </div>
 
-                {/* ── RECOMMENDED (SELECTED) & EXCLUDED INTERVENTIONS ── */}
+                {/* â”€â”€ RECOMMENDED (SELECTED) & EXCLUDED INTERVENTIONS â”€â”€ */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                   {/* Selected Package Items (7 cols) */}
                   <div className="lg:col-span-7 p-6 rounded-xl bg-white border border-slate-200 shadow-sm space-y-4">
@@ -1531,7 +1531,7 @@ export function PropertyDashboard() {
                   </div>
                 </div>
 
-                {/* ── ROUTE IMPACT ANALYSIS (REFLECTS SELECTED PACKAGE) ── */}
+                {/* â”€â”€ ROUTE IMPACT ANALYSIS (REFLECTS SELECTED PACKAGE) â”€â”€ */}
                 <div className="p-6 rounded-xl bg-white border border-slate-200 shadow-sm space-y-4">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-4">
                     <div>
@@ -1585,7 +1585,7 @@ export function PropertyDashboard() {
                               </span>
                               <div>
                                 <h5 className="font-bold text-sm text-slate-900">Route A: Main Avenue</h5>
-                                <p className="text-[11px] text-slate-500">620m · 9 min walk</p>
+                                <p className="text-[11px] text-slate-500">620m  ·  9 min walk</p>
                               </div>
                             </div>
                             <div className="text-right">
@@ -1596,11 +1596,11 @@ export function PropertyDashboard() {
                                 </span>
                                 {isImprovedA ? (
                                   <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200">
-                                    Δ -{deltaA}
+                                    Î” -{deltaA}
                                   </span>
                                 ) : (
                                   <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-100 text-slate-500">
-                                    Δ 0
+                                    Î” 0
                                   </span>
                                 )}
                               </div>
@@ -1634,7 +1634,7 @@ export function PropertyDashboard() {
                               : 'bg-white border-slate-200 text-slate-600'
                           }`}>
                             {isImprovedA ? (
-                              <span>✓ Luminaire L-04 repaired, restoring continuous illumination.</span>
+                              <span>âœ“ Luminaire L-04 repaired, restoring continuous illumination.</span>
                             ) : (
                               <span>Baseline: 1 active lighting penalty near Central Boulevard (unaffected by this package).</span>
                             )}
@@ -1665,7 +1665,7 @@ export function PropertyDashboard() {
                               </span>
                               <div>
                                 <h5 className="font-bold text-sm text-slate-900">Route B: Garden Shortcut</h5>
-                                <p className="text-[11px] text-slate-500">480m · 7 min walk</p>
+                                <p className="text-[11px] text-slate-500">480m  ·  7 min walk</p>
                               </div>
                             </div>
                             <div className="text-right">
@@ -1676,11 +1676,11 @@ export function PropertyDashboard() {
                                 </span>
                                 {isImprovedB ? (
                                   <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200">
-                                    Δ -{deltaB}
+                                    Î” -{deltaB}
                                   </span>
                                 ) : (
                                   <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-100 text-slate-500">
-                                    Δ 0
+                                    Î” 0
                                   </span>
                                 )}
                               </div>
@@ -1718,7 +1718,7 @@ export function PropertyDashboard() {
                               : 'bg-white border-slate-200 text-slate-600'
                           }`}>
                             {isImprovedB ? (
-                              <span>✓ Model improvements applied across Garden Shortcut.</span>
+                              <span>âœ“ Model improvements applied across Garden Shortcut.</span>
                             ) : (
                               <span>Baseline: Multiple impediments unaddressed across unlit garden pathway.</span>
                             )}
@@ -1734,7 +1734,7 @@ export function PropertyDashboard() {
                               </span>
                               <div>
                                 <h5 className="font-bold text-sm text-slate-900">Route C: Courtyard Link</h5>
-                                <p className="text-[11px] text-slate-500">520m · 8 min walk</p>
+                                <p className="text-[11px] text-slate-500">520m  ·  8 min walk</p>
                               </div>
                             </div>
                             <div className="text-right">
@@ -1779,7 +1779,7 @@ export function PropertyDashboard() {
 
                   {/* Scientific Caveat Banner */}
                   <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 text-[11px] text-slate-500 leading-relaxed">
-                    <span className="font-bold text-slate-700">Modelled Metric Note:</span> ΔC represents simulated reduction in environmental penalty indices under prototype assumptions. It is not an empirical guarantee of incident elimination.
+                    <span className="font-bold text-slate-700">Modelled Metric Note:</span> Î”C represents simulated reduction in environmental penalty indices under prototype assumptions. It is not an empirical guarantee of incident elimination.
                   </div>
                 </div>
               </div>
@@ -1792,7 +1792,7 @@ export function PropertyDashboard() {
           {propertyTab === 'lighting' && (
             <div className="space-y-6">
 
-              {/* ── Streetlight Condition ── */}
+              {/* â”€â”€ Streetlight Condition â”€â”€ */}
               <div className="p-6 rounded-xl bg-white border border-slate-200 shadow-sm space-y-4">
                 <div>
                   <h3 className="text-sm font-bold text-slate-900">Streetlight Condition</h3>
@@ -1836,7 +1836,7 @@ export function PropertyDashboard() {
                 </div>
               </div>
 
-              {/* ── Ground Condition ── */}
+              {/* â”€â”€ Ground Condition â”€â”€ */}
               <div className="p-6 rounded-xl bg-white border border-slate-200 shadow-sm space-y-4">
                 <div>
                   <h3 className="text-sm font-bold text-slate-900">Ground Condition</h3>
@@ -1888,7 +1888,7 @@ export function PropertyDashboard() {
                 })()}
               </div>
 
-              {/* ── Overgrown Vegetation ── */}
+              {/* â”€â”€ Overgrown Vegetation â”€â”€ */}
               <div className="p-6 rounded-xl bg-white border border-slate-200 shadow-sm space-y-4">
                 <div>
                   <h3 className="text-sm font-bold text-slate-900">Overgrown Vegetation</h3>

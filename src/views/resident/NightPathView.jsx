@@ -17,22 +17,68 @@ import { GoogleMapsTownshipView } from '../../components/GoogleMapsTownshipView'
 
 // Map location labels to approximate GPS coords for pin display
 const LOCATION_COORDS = {
-  'The Eighth, Elmina Green':       { lat: 3.1835, lng: 101.5120 },
-  'Elmina Central Park':            { lat: 3.1872, lng: 101.5168 },
-  'Elmina Lakeside Mall':           { lat: 3.1905, lng: 101.5205 },
-  'Elmina East Clubhouse':          { lat: 3.1895, lng: 101.5165 },
-  'Elmina West Neighbourhood Park': { lat: 3.1820, lng: 101.5145 },
-  'Elmina Boulevard':               { lat: 3.1870, lng: 101.5135 },
-  'Granada Wellness Hub':           { lat: 3.1830, lng: 101.5180 },
-  'Elmina Heritage Trail':          { lat: 3.1855, lng: 101.5215 },
-  'Elmina North Gate':              { lat: 3.1885, lng: 101.5238 },
+  // Key Township & Hubs
+  'The Eighth, Elmina Green':                     { lat: 3.1835, lng: 101.5120 },
+  'Elmina Central Park':                          { lat: 3.1872, lng: 101.5168 },
+  'Elmina Lakeside Mall':                         { lat: 3.1905, lng: 101.5205 },
+  'Elmina East Clubhouse':                        { lat: 3.1895, lng: 101.5165 },
+  'Elmina West Neighbourhood Park':               { lat: 3.1820, lng: 101.5145 },
+  'Elmina Boulevard':                             { lat: 3.1870, lng: 101.5135 },
+  'Granada Wellness Hub':                         { lat: 3.1830, lng: 101.5180 },
+  'Elmina Heritage Trail':                        { lat: 3.1855, lng: 101.5215 },
+  'Elmina North Gate':                            { lat: 3.1885, lng: 101.5238 },
+
+  // Major Precincts & Developments
+  'Elmina West':                                  { lat: 3.1815, lng: 101.5115 },
+  'Elmina East':                                  { lat: 3.1890, lng: 101.5220 },
+  'Elmina Green':                                 { lat: 3.1840, lng: 101.5125 },
+  'Elmina Valley':                                { lat: 3.1860, lng: 101.5150 },
+  'Elmina Ridge 2':                               { lat: 3.1920, lng: 101.5180 },
+
+  // Parks & Recreation
+  'Sakura Lake':                                  { lat: 3.1865, lng: 101.5190 },
+  'Elmina Outdoor Sculpture Museum':              { lat: 3.1880, lng: 101.5175 },
+
+  // Commercial & Dining
+  'TEMU Business Centre':                         { lat: 3.1850, lng: 101.5230 },
+  'JUMPA @ Elmina Valley':                        { lat: 3.1868, lng: 101.5158 },
+
+  // Education & Sustainability
+  'SJKC Regent Elmina':                           { lat: 3.1842, lng: 101.5140 },
+  'HELP International School':                    { lat: 3.1780, lng: 101.5185 },
+  'SRK Taman Bukit Subang':                       { lat: 3.1765, lng: 101.5120 },
+  'Elmina Rainforest Knowledge Centre (ERKC)':    { lat: 3.1915, lng: 101.5220 },
+  'Elmina Living Collection Nursery (ELCN)':      { lat: 3.1925, lng: 101.5210 },
+  'Bukit Cherakah Forest Reserve':                { lat: 3.1940, lng: 101.5150 },
+
+  // Roads & Access
+  'Guthrie Corridor Expressway (GCE)':            { lat: 3.1890, lng: 101.5260 },
+  'DASH Expressway':                              { lat: 3.1810, lng: 101.5250 },
+  'Elmina Interchange':                           { lat: 3.1850, lng: 101.5255 },
+
+  // Healthcare
+  'Putra Medical Centre Bukit Rahman Putra':      { lat: 3.2050, lng: 101.5520 },
+  'Ramsay Sime Darby Ara Damansara Medical Centre':{ lat: 3.1180, lng: 101.5790 },
+  'Hospital Sungai Buloh':                        { lat: 3.2190, lng: 101.5820 },
+
+  // Transit & Public Transport
+  'Elmina Central Transit Hub / Bus & LRT Connector': { lat: 3.1885, lng: 101.5235 },
 };
 
 export function NightPathView() {
-  const { setResidentTab, routeCategory, setRouteCategory, setSelectedRouteId } = useNightSafe();
+  const {
+    setResidentTab,
+    routeCategory,
+    setRouteCategory,
+    setSelectedRouteId,
+    journeyOrigin,
+    setJourneyOrigin,
+    journeyDestination,
+    setJourneyDestination
+  } = useNightSafe();
 
-  const [from, setFrom]             = useState('');
-  const [to, setTo]                 = useState('');
+  const [from, setFrom]             = useState(journeyOrigin || '');
+  const [to, setTo]                 = useState(journeyDestination || '');
   const [fromFocus, setFromFocus]   = useState(false);
   const [toFocus, setToFocus]       = useState(false);
   const [locationGranted, setLocationGranted] = useState(false);
@@ -51,6 +97,8 @@ export function NightPathView() {
   };
 
   const handleConfirm = () => {
+    if (setJourneyOrigin) setJourneyOrigin(from);
+    if (setJourneyDestination) setJourneyDestination(to);
     setResidentTab('routes');
   };
 
@@ -238,24 +286,6 @@ export function NightPathView() {
             <p className="text-[10px] text-slate-600 leading-relaxed">
               Enter your <span className="text-slate-900 font-semibold">origin</span> and <span className="text-slate-900 font-semibold">destination</span> above to compare safe night routes across Elmina.
             </p>
-          </div>
-        )}
-
-        {/* From/To legend on map when selected */}
-        {(from || to) && (
-          <div className="absolute top-2 right-2 space-y-1 z-10">
-            {from && (
-              <div className="flex items-center gap-1.5 bg-white/90 backdrop-blur-sm border border-[#2864A6]/30 rounded-lg px-2 py-1 shadow-sm">
-                <div className="w-2 h-2 rounded-full bg-[#2864A6] shrink-0" />
-                <span className="text-[9px] text-slate-700 font-semibold max-w-[100px] truncate">{from}</span>
-              </div>
-            )}
-            {to && (
-              <div className="flex items-center gap-1.5 bg-white/90 backdrop-blur-sm border border-rose-400/30 rounded-lg px-2 py-1 shadow-sm">
-                <MapPin className="w-2.5 h-2.5 text-rose-500 shrink-0" />
-                <span className="text-[9px] text-slate-700 font-semibold max-w-[100px] truncate">{to}</span>
-              </div>
-            )}
           </div>
         )}
       </div>

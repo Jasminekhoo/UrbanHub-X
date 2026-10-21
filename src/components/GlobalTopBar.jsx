@@ -18,7 +18,7 @@ export function GlobalTopBar() {
     alerts, 
   } = useNightSafe();
 
-  const activeAlertCount = alerts.filter(a => a.status !== 'Resolved — demo').length;
+  const activeAlertCount = alerts.filter(a => a.status !== 'Resolved').length;
 
   return (
     <header className="sticky top-0 z-40 bg-[#142B4A] text-white border-b border-slate-700 shadow-md">

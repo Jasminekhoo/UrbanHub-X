@@ -73,6 +73,13 @@
         "Elmina Living Collection Nursery (ELCN)",
         "Bukit Cherakah Forest Reserve"
       ]
+    },
+    {
+      "id": "transit-transportation",
+      "name": "Transit & Public Transport",
+      "locations": [
+        "Elmina Central Transit Hub / Bus & LRT Connector"
+      ]
     }
   ]
 }

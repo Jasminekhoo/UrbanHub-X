@@ -20,13 +20,15 @@ import {
   RotateCcw,
   Info,
   Smartphone,
-  LogOut
+  LogOut,
+  ArrowLeft
 } from 'lucide-react';
 
 export function SecurityDashboard() {
   const { 
     alerts, 
     acknowledgeAlert, 
+    assignGuardToAlert,
     markResponseInProgress, 
     addAlertNote, 
     resolveAlert, 
@@ -48,10 +50,15 @@ export function SecurityDashboard() {
   const [assignedGuard, setAssignedGuard] = useState(null);
   const [guardAssignSaved, setGuardAssignSaved] = useState(false);
 
+  const formatAlertStatus = (status) =>
+    typeof status === 'string' ? status.replace(/\s*[—–-]\s*demo\s*$/i, '').trim() : status;
+
+  const isResolvedStatus = (status) => formatAlertStatus(status) === 'Resolved';
+
   const GUARDS = [
-    { id: 'GRD-01', name: 'Officer Hafiz Rahman', sector: 'Sector A — Main Avenue', status: 'Available', distance: '~80m from L-04' },
-    { id: 'GRD-02', name: 'Officer Tan Wei Ming', sector: 'Sector B — Garden Shortcut', status: 'Available', distance: '~120m from L-07' },
-    { id: 'GRD-03', name: 'Officer Pradeep Kumar', sector: 'Sector C — Courtyard', status: 'On patrol', distance: '~200m from L-06' },
+    { id: 'GRD-01', name: 'Officer Hafiz Rahman', sector: 'Sector A  —  Main Avenue', status: 'Available', distance: '~80m from L-04' },
+    { id: 'GRD-02', name: 'Officer Tan Wei Ming', sector: 'Sector B  —  Garden Shortcut', status: 'Available', distance: '~120m from L-07' },
+    { id: 'GRD-03', name: 'Officer Pradeep Kumar', sector: 'Sector C  —  Courtyard', status: 'On patrol', distance: '~200m from L-06' },
     { id: 'GRD-04', name: 'Officer Siti Aisyah', sector: 'Control Room', status: 'Standby', distance: 'Remote' },
   ];
 
@@ -71,7 +78,7 @@ export function SecurityDashboard() {
   const totalAlerts = alerts.length;
   const awaitingAck = alerts.filter(a => a.status === 'Awaiting security acknowledgement').length;
   const inProgress = alerts.filter(a => a.status === 'Response in progress' || a.status === 'Acknowledged').length;
-  const resolved = alerts.filter(a => a.status === 'Resolved — demo').length;
+  const resolved = alerts.filter(a => isResolvedStatus(a.status)).length;
 
   return (
     <div className="min-h-screen bg-[#F5F7FA] text-[#172334] flex flex-col font-sans">
@@ -276,7 +283,7 @@ export function SecurityDashboard() {
                               : 'bg-emerald-500'
                           }`}></span>
                           <span className="font-bold text-xs text-slate-900">{alert.id}</span>
-                          <span className="text-[11px] font-semibold text-slate-600">• {alert.type}</span>
+                          <span className="text-[11px] font-semibold text-slate-600"> •  {alert.type}</span>
                         </div>
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                           alert.status === 'Awaiting security acknowledgement'
@@ -285,7 +292,7 @@ export function SecurityDashboard() {
                             ? 'bg-sky-100 text-sky-800'
                             : 'bg-emerald-100 text-emerald-800'
                         }`}>
-                          {alert.status}
+                          {formatAlertStatus(alert.status)}
                         </span>
                       </div>
 
@@ -329,13 +336,23 @@ export function SecurityDashboard() {
               </div>
             ) : (
               <div className="space-y-5">
+                {/* ── Top Bar: Quick Return to Command Overview ── */}
+                <div className="flex items-center justify-between pb-1">
+                  <button
+                    onClick={() => setSecurityTab('overview')}
+                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-slate-900 shadow-xs transition active:scale-98 cursor-pointer"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5 text-slate-500" />
+                    <span>Back to Command Overview</span>
+                  </button>
+                </div>
 
                 {/* ── TOP: Google Maps Geolocation ── */}
                 <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-sm space-y-3">
                   <div className="flex items-center justify-between">
                     <h4 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
                       <MapPin className="w-4 h-4 text-[#C83E4D]" />
-                      Incident Geolocation — {activeAlert.location}
+                      Incident Geolocation  —  {activeAlert.location}
                     </h4>
                     <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-100 text-slate-500">Google Maps</span>
                   </div>
@@ -352,7 +369,7 @@ export function SecurityDashboard() {
                   </p>
                 </div>
 
-                {/* ── MIDDLE: Incident Card + Notes, side by side on large screens ── */}
+                {/* â”€â”€ MIDDLE: Incident Card + Notes, side by side on large screens â”€â”€ */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
                   {/* Left 7 cols: Incident details */}
                   <div className="lg:col-span-7 space-y-4">
@@ -376,7 +393,7 @@ export function SecurityDashboard() {
                             ? 'bg-sky-100 text-sky-800 border border-sky-300'
                             : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
                         }`}>
-                          {activeAlert.status}
+                          {formatAlertStatus(activeAlert.status)}
                         </span>
                       </div>
 
@@ -422,7 +439,7 @@ export function SecurityDashboard() {
 
                         <button
                           onClick={() => markResponseInProgress(activeAlert.id)}
-                          disabled={activeAlert.status === 'Resolved — demo' || activeAlert.status === 'Response in progress'}
+                          disabled={isResolvedStatus(activeAlert.status) || activeAlert.status === 'Response in progress'}
                           className="py-2 px-3.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold shadow disabled:opacity-40 transition"
                         >
                           Mark Response In Progress
@@ -430,16 +447,11 @@ export function SecurityDashboard() {
 
                         <button
                           onClick={() => setShowResolveModal(true)}
-                          disabled={activeAlert.status === 'Resolved — demo'}
+                          disabled={isResolvedStatus(activeAlert.status)}
                           className="py-2 px-3.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow disabled:opacity-40 transition"
                         >
                           Resolve Alert
                         </button>
-                      </div>
-
-                      {/* Disclaimer */}
-                      <div className="p-2.5 rounded-lg bg-slate-100 text-[10px] text-slate-500 leading-tight">
-                        <strong>Audited Operational Boundary:</strong> Coordinates last recorded sensor checkpoints with the security console. Does not guarantee dispatch arrival times or replace 999 emergency services.
                       </div>
                     </div>
 
@@ -541,15 +553,14 @@ export function SecurityDashboard() {
                           if (assignedGuard) {
                             const guard = GUARDS.find(g => g.id === assignedGuard);
                             setGuardAssignSaved(true);
-                            addAlertNote(activeAlert.id, `${new Date().toLocaleTimeString('en-MY', { hour: '2-digit', minute: '2-digit' })} — Dispatch: ${guard.name} assigned to respond at ${activeAlert.location}.`);
-                            if (showToast) showToast(`${guard.name} dispatched to ${activeAlert.location}`, 'success');
+                            assignGuardToAlert(activeAlert.id, guard.id, guard.name);
                           }
                         }}
-                        disabled={!assignedGuard || guardAssignSaved}
+                        disabled={!assignedGuard || guardAssignSaved || activeAlert.assignedGuard === GUARDS.find(g => g.id === assignedGuard)?.name}
                         className="w-full py-2.5 rounded-xl bg-[#C83E4D] hover:bg-red-700 text-white text-xs font-bold shadow-sm disabled:opacity-40 transition flex items-center justify-center gap-2"
                       >
                         <Radio className="w-3.5 h-3.5" />
-                        {guardAssignSaved ? 'Guard Dispatched' : 'Confirm Dispatch'}
+                        {guardAssignSaved || activeAlert.assignedGuard ? `Guard Dispatched (${activeAlert.assignedGuard || GUARDS.find(g => g.id === assignedGuard)?.name})` : 'Confirm Dispatch'}
                       </button>
 
                       <p className="text-[10px] text-slate-400 text-center leading-tight">
@@ -638,10 +649,10 @@ export function SecurityDashboard() {
                 alerts.map((al) => (
                   <div key={al.id} className="p-3 rounded-lg bg-slate-50 border border-slate-200 text-xs space-y-1">
                     <div className="flex items-center justify-between font-bold text-slate-800">
-                      <span>{al.id} — {al.type}</span>
+                      <span>{al.id}  —  {al.type}</span>
                       <span className="text-[10px] font-mono">{al.alertReceived}</span>
                     </div>
-                    <div className="text-slate-600">Location: {al.location} · Status: <strong>{al.status}</strong></div>
+                    <div className="text-slate-600">Location: {al.location}  ·  Status: <strong>{formatAlertStatus(al.status)}</strong></div>
                     {al.notes && al.notes.length > 0 && (
                       <div className="text-[11px] text-slate-500 pt-1">
                         Notes: {al.notes.join(' | ')}
@@ -659,7 +670,7 @@ export function SecurityDashboard() {
       {showResolveModal && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-xl max-w-sm w-full p-5 space-y-4 shadow-2xl border border-slate-200 animate-scaleUp">
-            <h4 className="font-bold text-sm text-slate-900">Resolve Demo Alert?</h4>
+            <h4 className="font-bold text-sm text-slate-900">Resolve Alert?</h4>
             <p className="text-xs text-slate-600 leading-relaxed">
               Confirm resolution of simulated case <strong>{activeAlert?.id}</strong>. Alert will be marked resolved and removed from the active queue.
             </p>

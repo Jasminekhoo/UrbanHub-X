@@ -10,10 +10,46 @@ import {
   INITIAL_ALERTS,
   INITIAL_CHECKPOINT_EVENTS,
   solveKnapsackBudget,
-  calculateRouteCost
+  calculateRouteCost,
+  nextId,
+  feedCategoryFor
 } from '../data/nightSafeData';
+import { verifyDataModel } from '../data/modelIntegrity';
 
 const NightSafeContext = createContext();
+
+// ---------------------------------------------------------------------------
+// Schema versioning. Bump SCHEMA_VERSION whenever the shape of the seeded
+// collections changes. Cached localStorage copies written by an older schema
+// are discarded on load, so all three role consoles always render exactly what
+// nightSafeData.js defines — no stale demo queue from a previous build.
+// ---------------------------------------------------------------------------
+const SCHEMA_VERSION = 2;
+const PERSISTED_KEYS = ['ns_alerts', 'ns_hazards', 'ns_checkpoints'];
+
+(function purgeStaleSchema() {
+  try {
+    if (localStorage.getItem('ns_schema_version') !== String(SCHEMA_VERSION)) {
+      PERSISTED_KEYS.forEach(key => localStorage.removeItem(key));
+      localStorage.setItem('ns_schema_version', String(SCHEMA_VERSION));
+    }
+  } catch (e) {
+    // No localStorage available (SSR / privacy mode) — nothing to purge.
+  }
+})();
+
+// Dev-only guard: surface any model drift (dangling ids, unknown statuses,
+// route costs that disagree with their penalties) instead of letting it show up
+// as a mysteriously empty list or a wrong number somewhere in the three roles.
+if (import.meta.env?.DEV) {
+  const problems = verifyDataModel();
+  if (problems.length > 0) {
+    console.warn(
+      `[UrbanHub-X] data model check found ${problems.length} issue(s):\n` +
+      problems.map(p => ` • ${p}`).join('\n')
+    );
+  }
+}
 
 export function NightSafeProvider({ children }) {
   // Current demo role: 'select' | 'resident' | 'security' | 'property'
@@ -229,16 +265,18 @@ export function NightSafeProvider({ children }) {
       setActiveLamps(ahead);
 
       // Add to checkpoint audit event log
-      const newEvent = {
-        id: `CP-${Date.now().toString().slice(-4)}`,
-        checkpointId: nodeId,
-        checkpointName: SCHEMATIC_NODES.find(n => n.id === nodeId)?.name || nodeId,
-        residentName: RESIDENT_PROFILE.title,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        status: 'Passed',
-        source: 'Simulated Checkpoint Node'
-      };
-      setCheckpointEvents(prev => [newEvent, ...prev]);
+      setCheckpointEvents(prev => {
+        const newEvent = {
+          id: nextId('CP', prev),
+          checkpointId: nodeId,
+          checkpointName: SCHEMATIC_NODES.find(n => n.id === nodeId)?.name || nodeId,
+          residentName: RESIDENT_PROFILE.title,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          status: 'Passed',
+          source: 'Simulated Checkpoint Node'
+        };
+        return [newEvent, ...prev];
+      });
 
       showToast(`Checkpoint ${nodeId} passed.`, 'success');
     }
@@ -259,7 +297,7 @@ export function NightSafeProvider({ children }) {
     } else if (responseType === 'no_response') {
       // Create follow up alert for security
       const followUpAlert = {
-        id: `AL-${Date.now().toString().slice(-3)}`,
+        id: nextId('AL', alerts),
         type: 'Missed Checkpoint / No Response',
         severity: 'Medium',
         resident: RESIDENT_PROFILE.title,
@@ -310,7 +348,7 @@ export function NightSafeProvider({ children }) {
 
   // Trigger Overt SOS (Screen R7) — returns the new alert ID
   const triggerSos = (category = 'Personal Safety') => {
-    const newId = `AL-${Date.now().toString().slice(-3)}`;
+    const newId = nextId('AL', alerts);
     const newAlert = {
       id: newId,
       type: 'Emergency SOS Alert',
@@ -358,16 +396,18 @@ export function NightSafeProvider({ children }) {
     setActiveLamps(ahead);
 
     // Log checkpoint event
-    const newEvent = {
-      id: `CP-${Date.now().toString().slice(-4)}`,
-      checkpointId: nextNodeId,
-      checkpointName: SCHEMATIC_NODES.find(n => n.id === nextNodeId)?.name || nextNodeId,
-      residentName: RESIDENT_PROFILE.title,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      status: 'Passed',
-      source: 'Walking Demo Sensor'
-    };
-    setCheckpointEvents(prev => [newEvent, ...prev]);
+    setCheckpointEvents(prev => {
+      const newEvent = {
+        id: nextId('CP', prev),
+        checkpointId: nextNodeId,
+        checkpointName: SCHEMATIC_NODES.find(n => n.id === nextNodeId)?.name || nextNodeId,
+        residentName: RESIDENT_PROFILE.title,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        status: 'Passed',
+        source: 'Walking Demo Sensor'
+      };
+      return [newEvent, ...prev];
+    });
 
     // Popup safety confirmation message
     setMissedCheckpointPrompt(true);
@@ -376,25 +416,41 @@ export function NightSafeProvider({ children }) {
 
   // Submit hazard report (Scene 5 - Screen R9)
   const submitHazardReport = ({ category, location, severity, description, title, contactInfo, affectedNode = 'L-04' }) => {
-    const nextNum = hazards.length + 101;
-    const newId = `HZ-${nextNum}`;
+    const newId = nextId('HZ', hazards);
+
+    // Derive the affected routes from the node the report is pinned to, so the
+    // Resident feed, Property inspector and the schematic map all agree.
+    // (Previously hardcoded to ['A'] or ['B'] regardless of the real node.)
+    const routesAffected = Object.values(SCHEMATIC_ROUTES)
+      .filter(route => route.nodes.includes(affectedNode))
+      .map(route => route.id);
+    const assignedPath = routesAffected.length
+      ? `Route ${routesAffected.join(', ')}`
+      : 'Unassigned';
+
+    const now = new Date();
 
     const newHazard = {
       id: newId,
       title: title || `${category.split('/')[0].trim()} at ${location}`,
       category,
+      feedCategory: feedCategoryFor(category),
       location,
       contactInfo: contactInfo || '',
       affectedNode,
-      routesAffected: affectedNode === 'L-04' ? ['A'] : ['B'],
+      routesAffected,
+      assignedPath,
       severity,
       pedestrianExposure: 'High',
       urgency: severity === 'High' ? 'High' : 'Medium',
       evidenceConfidence: 'Medium',
       status: 'Reported',
+      reportDate: now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+      figureUrl: null,
+      figureCaption: '',
       source: 'Resident report',
-      timestamp: 'Just now',
-      reportedBy: RESIDENT_PROFILE.title,
+      timestamp: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      reportedBy: `${RESIDENT_PROFILE.title} (Resident)`,
       description: description || 'Reported by resident via mobile prototype form.',
       estimatedCost: 1500,
       pairedInterventionId: null

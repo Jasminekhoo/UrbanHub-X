@@ -29,6 +29,50 @@ export const TOWNSHIP_INFO = {
   studentTeam: "2 Quantity Surveying & 2 Computer Science Students"
 };
 
+// ---------------------------------------------------------------------------
+// Canonical enumerations — single source of truth shared by all three roles
+// (Resident / Security / Property). Every seed record must only use values
+// from these lists, otherwise the UI filters and badges break silently.
+// ---------------------------------------------------------------------------
+
+// Hazard lifecycle: reachable via the Property Inspector status buttons.
+// 'Reported' -> 'Under verification' -> 'Verified' -> 'In progress' -> 'Resolved'
+// 'Scheduled' is assigned by Property when work is queued for a later cycle.
+export const HAZARD_STATUSES = [
+  'Reported',
+  'Under verification',
+  'Verified',
+  'Scheduled',
+  'In progress',
+  'Resolved'
+];
+
+// Alert lifecycle: driven by the Security console action buttons.
+export const ALERT_STATUSES = [
+  'Awaiting security acknowledgement',
+  'Acknowledged',
+  'Response in progress',
+  'Resolved — demo'
+];
+
+export const SEVERITY_LEVELS = ['High', 'Medium', 'Low'];
+
+// Evidence feeds used by the Property "Lighting / Corridor" screen to group
+// hazards, and by the Resident feed. Every hazard must land in exactly one.
+export const FEED_CATEGORIES = ['Light Broken', 'Damaged Path', 'Overgrown Vege', 'Other'];
+
+// Derives the evidence feed from a hazard category. This reproduces the
+// feedCategory already stored on every seed hazard, and guarantees that
+// hazards submitted through the Resident form also land in a visible feed
+// instead of disappearing from the Property grouping.
+export function feedCategoryFor(category = '') {
+  const c = String(category).toLowerCase();
+  if (c.includes('light')) return 'Light Broken';
+  if (c.includes('sightline') || c.includes('vegetation') || c.includes('overgrown') || c.includes('vege')) return 'Overgrown Vege';
+  if (c.includes('path') || c.includes('pavement') || c.includes('paver') || c.includes('kerb')) return 'Damaged Path';
+  return 'Other';
+}
+
 export const RESIDENT_PROFILE = {
   name: "Aina",
   title: "Aina",
@@ -178,7 +222,9 @@ export const SCHEMATIC_ROUTES = {
       sightline: 2,
       pathway: 1
     },
-    totalCost: 26,
+    // 16 + (5 + 2 + 1) = 24. Was 26, which made calculateRouteCost() report a
+    // phantom "ΔC 2 pts" improvement before any intervention was applied.
+    totalCost: 24,
     recommended: false,
     recommendationReason: "Shortest physical corridor connecting directly through courtyard gates with moderate night illumination.",
     caveat: "Route cost is an illustrative environmental model index, not a guarantee of safety or crime prevention.",
@@ -218,9 +264,11 @@ export const INITIAL_HAZARDS = [
     category: "Lighting deficiency / faulty streetlight",
     feedCategory: "Light Broken",
     location: "Transit Connector Hub (Lamp L-08)",
-    assignedPath: "Route C",
+    // L-08 (Central Transit Stop) is the shared terminus of Route A, B and C,
+    // so this hazard belongs to all three — matching IN-04's penalty reduction.
+    assignedPath: "Route A, B & C",
     affectedNode: "L-08",
-    routesAffected: ["C"],
+    routesAffected: ["A", "B", "C"],
     severity: "Medium",
     pedestrianExposure: "High",
     urgency: "High",
@@ -282,7 +330,10 @@ export const INITIAL_HAZARDS = [
     reportedBy: "Farah (Resident)",
     description: "Ground subsidence beneath sidewalk pavers creating an abrupt step drop. Could cause ankle sprains or damage to accessibility aids during rainy nights.",
     estimatedCost: 2100,
-    pairedInterventionId: "IN-05"
+    // IN-05 is an unrelated capital lighting improvement (it declares
+    // targetHazardId: null), so no package currently covers this hazard.
+    // Pointing it at IN-05 made the pairing contradict IN-05's own metadata.
+    pairedInterventionId: null
   },
   {
     id: "HZ-106",
@@ -403,10 +454,10 @@ export const CANDIDATE_INTERVENTIONS = [
     cost: 1200,
     modelledBenefit: 8,
     targetHazardId: "HZ-104",
-    targetRoute: "Route A & B",
+    targetRoute: "Route A, B & C",
     segmentAffected: "Transit Stop Approach (L-08)",
     penaltyReduction: { lighting: -3 },
-    explanation: "Replaces faulty LED driver. Resolves HZ-104, reducing environmental penalties on both routes by 3 points."
+    explanation: "Replaces faulty LED driver. Resolves HZ-104 at the shared transit terminus, reducing lighting penalties on Route A, B and C by 3 points each."
   },
   {
     id: "IN-05",
@@ -419,6 +470,30 @@ export const CANDIDATE_INTERVENTIONS = [
     segmentAffected: "Garden Entrance (L-05 to L-06)",
     penaltyReduction: { lighting: -5 },
     explanation: "Installs supplemental solar bollard luminaires on previously unlit section of garden path."
+  },
+  {
+    id: "IN-06",
+    title: "Rebuild kerb ramp at Courtyard Link East Access",
+    category: "Civil Works / Footpath",
+    cost: 1500,
+    modelledBenefit: 6,
+    targetHazardId: "HZ-106",
+    targetRoute: "Route C",
+    segmentAffected: "Courtyard Link East Access (L-05)",
+    penaltyReduction: { pathway: -1 },
+    explanation: "Reconstructs the fractured kerb ramp and restores a continuous accessibility slope. Resolves HZ-106, reducing Route C cost by 1 point."
+  },
+  {
+    id: "IN-07",
+    title: "Clear hedge encroachment at Courtyard Inner Perimeter",
+    category: "Landscape Management",
+    cost: 650,
+    modelledBenefit: 4,
+    targetHazardId: "HZ-107",
+    targetRoute: "Route C",
+    segmentAffected: "Courtyard Inner Perimeter (L-07)",
+    penaltyReduction: { sightline: -2 },
+    explanation: "Cuts back perimeter hedging to restore a clearance of at least 1.2m. Resolves HZ-107, reducing Route C cost by 2 points."
   }
 ];
 
@@ -607,6 +682,33 @@ export const INITIAL_CHECKPOINT_EVENTS = [
   }
 ];
 
+// ---------------------------------------------------------------------------
+// Generates the next collision-free identifier for a collection.
+// Ids look like "HZ-108" / "AL-947" / "CP-309". Deriving the counter from the
+// current maximum — instead of Date.now() or array length — keeps ids unique
+// even after records are deleted or several are created in the same tick.
+// ---------------------------------------------------------------------------
+export function nextId(prefix, items = [], width = 3) {
+  const used = new Set();
+  let max = 0;
+
+  (items || []).forEach(item => {
+    const id = String(item?.id ?? '');
+    if (!id) return;
+    used.add(id);
+    const match = id.match(/(\d+)$/);
+    if (match) max = Math.max(max, parseInt(match[1], 10));
+  });
+
+  let candidate;
+  do {
+    max += 1;
+    candidate = `${prefix}-${String(max).padStart(width, '0')}`;
+  } while (used.has(candidate));
+
+  return candidate;
+}
+
 // Knapsack 0/1 Budget Optimisation helper
 export function solveKnapsackBudget(budget, items = CANDIDATE_INTERVENTIONS) {
   const n = items.length;
@@ -685,12 +787,26 @@ export function calculateRouteCost(routeId, appliedInterventions = []) {
       if (routeId === 'B' && (id === 'IN-04' || id === 'IN-05')) {
         lightingPenalty = Math.max(0, lightingPenalty + intervention.penaltyReduction.lighting);
       }
+      // L-08 is shared by every route, so IN-04 also improves Route C.
+      if (routeId === 'C' && id === 'IN-04') {
+        lightingPenalty = Math.max(0, lightingPenalty + intervention.penaltyReduction.lighting);
+      }
     }
-    if (intervention.penaltyReduction.sightline && routeId === 'B' && id === 'IN-02') {
-      sightlinePenalty = Math.max(0, sightlinePenalty + intervention.penaltyReduction.sightline);
+    if (intervention.penaltyReduction.sightline) {
+      if (routeId === 'B' && id === 'IN-02') {
+        sightlinePenalty = Math.max(0, sightlinePenalty + intervention.penaltyReduction.sightline);
+      }
+      if (routeId === 'C' && id === 'IN-07') {
+        sightlinePenalty = Math.max(0, sightlinePenalty + intervention.penaltyReduction.sightline);
+      }
     }
-    if (intervention.penaltyReduction.pathway && routeId === 'B' && id === 'IN-03') {
-      pathwayPenalty = Math.max(0, pathwayPenalty + intervention.penaltyReduction.pathway);
+    if (intervention.penaltyReduction.pathway) {
+      if (routeId === 'B' && id === 'IN-03') {
+        pathwayPenalty = Math.max(0, pathwayPenalty + intervention.penaltyReduction.pathway);
+      }
+      if (routeId === 'C' && id === 'IN-06') {
+        pathwayPenalty = Math.max(0, pathwayPenalty + intervention.penaltyReduction.pathway);
+      }
     }
   });
 

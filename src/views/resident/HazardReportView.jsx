@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNightSafe } from '../../context/NightSafeContext';
 import { GoogleMapsTownshipView } from '../../components/GoogleMapsTownshipView';
+import { HAZARD_STATUSES } from '../../data/nightSafeData';
 import { 
   AlertTriangle, 
   MapPin, 
@@ -156,7 +157,7 @@ export function HazardReportView() {
           <div className="space-y-3">
             {/* Status Filter Pills */}
             <div className="flex items-center gap-1.5 overflow-x-auto text-[11px] pb-1">
-              {['all', 'Reported', 'Under verification', 'Verified', 'In progress', 'Resolved'].map((st) => (
+              {['all', ...HAZARD_STATUSES].map((st) => (
                 <button
                   key={st}
                   onClick={() => setReportStatusFilter(st)}

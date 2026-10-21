@@ -40,6 +40,39 @@ import {
 
 // The eight M-screens collapsed into three logical nav sections.
 // `propertyTab` stays the single source of truth — this is presentation only.
+// Evidence feeds rendered on the "Lighting / Corridor" screen. Driven by
+// FEED_CATEGORIES so a hazard can never fall outside every group.
+const FEED_SECTIONS = [
+  {
+    feed: 'Light Broken',
+    title: 'Streetlight Condition',
+    grid: 'grid-cols-1 sm:grid-cols-2',
+    emptyText: 'No streetlight condition reports at this time.',
+    fallbackCost: '1,500'
+  },
+  {
+    feed: 'Damaged Path',
+    title: 'Ground Condition',
+    grid: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
+    emptyText: 'No ground condition reports at this time.',
+    fallbackCost: '2,000'
+  },
+  {
+    feed: 'Overgrown Vege',
+    title: 'Overgrown Vegetation',
+    grid: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
+    emptyText: 'No vegetation obstruction reports at this time.',
+    fallbackCost: '800'
+  },
+  {
+    feed: 'Other',
+    title: 'Other Environmental Concerns',
+    grid: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
+    emptyText: 'No other environmental reports at this time.',
+    fallbackCost: '1,500'
+  }
+];
+
 const NAV_GROUPS = [
   {
     id: 'overview-map',
@@ -236,7 +269,7 @@ export function PropertyDashboard() {
   // Statistics
   const openHazards = hazards.filter(h => h.status !== 'Resolved').length;
   const highPriority = hazards.filter(h => h.severity === 'High' && h.status !== 'Resolved').length;
-  const awaitingVerification = hazards.filter(h => h.status === 'Reported' || h.status === 'Under verification' || h.status === 'Needs verification').length;
+  const awaitingVerification = hazards.filter(h => h.status === 'Reported' || h.status === 'Under verification').length;
 
   // Consolidated summary-bar metrics (replaces the 5 standalone metric cards)
   const summaryMetrics = [
@@ -424,7 +457,7 @@ export function PropertyDashboard() {
                         updateHazardStatus(activeHazard?.id, 'Under verification');
                         if (showToast) showToast(`Hazard ${activeHazard?.id} status set to Under Verification`, 'info');
                       }}
-                      className={`py-2.5 px-3 rounded-xl text-xs font-bold border transition shadow-sm cursor-pointer ${activeHazard?.status === 'Under verification' || activeHazard?.status === 'Reported' || activeHazard?.status === 'Needs verification'
+                      className={`py-2.5 px-3 rounded-xl text-xs font-bold border transition shadow-sm cursor-pointer ${activeHazard?.status === 'Under verification' || activeHazard?.status === 'Reported'
                         ? 'bg-amber-500 text-white border-amber-600 ring-2 ring-amber-300'
                         : 'bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-200'
                         }`}
@@ -1791,155 +1824,56 @@ export function PropertyDashboard() {
            ------------------------------------------------------------- */}
           {propertyTab === 'lighting' && (
             <div className="space-y-6">
-
-              {/* ── Streetlight Condition ── */}
-              <div className="p-6 rounded-xl bg-white border border-slate-200 shadow-sm space-y-4">
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900">Streetlight Condition</h3>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {hazards.filter(h => h.feedCategory === 'Light Broken').map(hz => {
-                    const isResolved = hz.status === 'Resolved';
-                    const dotColor = isResolved ? 'bg-emerald-500' : hz.severity === 'High' ? 'bg-red-500' : 'bg-yellow-400';
-                    const cardBorder = isResolved ? 'border-emerald-200' : hz.severity === 'High' ? 'border-red-300' : 'border-yellow-300';
-                    const cardBg = isResolved ? 'bg-emerald-50/40' : hz.severity === 'High' ? 'bg-red-50/60' : 'bg-yellow-50/60';
-                    return (
-                      <div
-                        key={hz.id}
-                        onClick={() => {
-                          setSelectedHazardId(hz.id);
-                          setPropertyTab('inspector');
-                        }}
-                        className={`p-3.5 rounded-xl border ${cardBorder} ${cardBg} flex gap-3 items-start cursor-pointer hover:shadow-md hover:border-[#2864A6] transition`}
-                      >
-                        {hz.figureUrl && (
-                          <img src={hz.figureUrl} alt={hz.title} className="w-16 h-16 rounded-lg object-cover border border-slate-200 shrink-0" />
-                        )}
-                        <div className="space-y-1 flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-1">
-                            <div className="flex items-center gap-1.5">
-                              <span className={`w-2 h-2 rounded-full shrink-0 ${dotColor}`} />
-                              <span className="font-bold text-xs text-[#142B4A]">{hz.id}</span>
+              {FEED_SECTIONS.map(section => {
+                const feedHazards = hazards.filter(h => (h.feedCategory || 'Other') === section.feed);
+                return (
+                  <div key={section.feed} className="p-6 rounded-xl bg-white border border-slate-200 shadow-sm space-y-4">
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-900">{section.title}</h3>
+                    </div>
+                    {feedHazards.length === 0 ? (
+                      <p className="text-xs text-slate-400 italic">{section.emptyText}</p>
+                    ) : (
+                      <div className={`grid gap-3 ${section.grid}`}>
+                        {feedHazards.map(hz => {
+                          const isResolved = hz.status === 'Resolved';
+                          const dotColor = isResolved ? 'bg-emerald-500' : hz.severity === 'High' ? 'bg-red-500' : 'bg-yellow-400';
+                          const cardBorder = isResolved ? 'border-emerald-200' : hz.severity === 'High' ? 'border-red-300' : 'border-yellow-300';
+                          const cardBg = isResolved ? 'bg-emerald-50/40' : hz.severity === 'High' ? 'bg-red-50/60' : 'bg-yellow-50/60';
+                          return (
+                            <div
+                              key={hz.id}
+                              onClick={() => {
+                                setSelectedHazardId(hz.id);
+                                setPropertyTab('inspector');
+                              }}
+                              className={`p-3.5 rounded-xl border ${cardBorder} ${cardBg} flex gap-3 items-start cursor-pointer hover:shadow-md hover:border-[#2864A6] transition`}
+                            >
+                              {hz.figureUrl && (
+                                <img src={hz.figureUrl} alt={hz.title} className="w-16 h-16 rounded-lg object-cover border border-slate-200 shrink-0" />
+                              )}
+                              <div className="space-y-1 flex-1 min-w-0">
+                                <div className="flex items-center justify-between gap-1">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className={`w-2 h-2 rounded-full shrink-0 ${dotColor}`} />
+                                    <span className="font-bold text-xs text-[#142B4A]">{hz.id}</span>
+                                  </div>
+                                </div>
+                                <div className="text-xs font-semibold text-slate-800 leading-snug truncate">{hz.title}</div>
+                                <div className="text-[11px] text-slate-500 truncate">{hz.location}</div>
+                                <div className="flex items-center justify-between text-[10px] pt-1">
+                                  <span className="text-slate-500">Status: <strong className="text-slate-800">{hz.status}</strong></span>
+                                  <span className="text-slate-500">Est: <strong>RM {hz.estimatedCost?.toLocaleString() || section.fallbackCost}</strong></span>
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                          <div className="text-xs font-semibold text-slate-800 leading-snug truncate">{hz.title}</div>
-                          <div className="text-[11px] text-slate-500 truncate">{hz.location}</div>
-                          <div className="flex items-center justify-between text-[10px] pt-1 text-slate-500">
-                            <span>Status: <strong className="text-slate-800">{hz.status}</strong></span>
-                            <span>Est: <strong>RM {hz.estimatedCost?.toLocaleString() || '1,500'}</strong></span>
-                          </div>
-                        </div>
+                          );
+                        })}
                       </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* ── Ground Condition ── */}
-              <div className="p-6 rounded-xl bg-white border border-slate-200 shadow-sm space-y-4">
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900">Ground Condition</h3>
-                </div>
-
-                {(() => {
-                  const groundHazards = hazards.filter(h => h.feedCategory === 'Damaged Path');
-                  if (groundHazards.length === 0) {
-                    return <p className="text-xs text-slate-400 italic">No ground condition reports at this time.</p>;
-                  }
-                  return (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {groundHazards.map(hz => {
-                        const isResolved = hz.status === 'Resolved';
-                        const dotColor = isResolved ? 'bg-emerald-500' : hz.severity === 'High' ? 'bg-red-500' : 'bg-yellow-400';
-                        const cardBorder = isResolved ? 'border-emerald-200' : hz.severity === 'High' ? 'border-red-300' : 'border-yellow-300';
-                        const cardBg = isResolved ? 'bg-emerald-50/40' : hz.severity === 'High' ? 'bg-red-50/60' : 'bg-yellow-50/60';
-                        return (
-                          <div
-                            key={hz.id}
-                            onClick={() => {
-                              setSelectedHazardId(hz.id);
-                              setPropertyTab('inspector');
-                            }}
-                            className={`p-3.5 rounded-xl border ${cardBorder} ${cardBg} flex gap-3 items-start cursor-pointer hover:shadow-md hover:border-[#2864A6] transition`}
-                          >
-                            {hz.figureUrl && (
-                              <img src={hz.figureUrl} alt={hz.title} className="w-16 h-16 rounded-lg object-cover border border-slate-200 shrink-0" />
-                            )}
-                            <div className="space-y-1 flex-1 min-w-0">
-                              <div className="flex items-center justify-between gap-1">
-                                <div className="flex items-center gap-1.5">
-                                  <span className={`w-2 h-2 rounded-full shrink-0 ${dotColor}`} />
-                                  <span className="font-bold text-xs text-[#142B4A]">{hz.id}</span>
-                                </div>
-                              </div>
-                              <div className="text-xs font-semibold text-slate-800 leading-snug truncate">{hz.title}</div>
-                              <div className="text-[11px] text-slate-500 truncate">{hz.location}</div>
-                              <div className="flex items-center justify-between text-[10px] pt-1">
-                                <span className="text-slate-500">Status: <strong className="text-slate-800">{hz.status}</strong></span>
-                                <span className="text-slate-500">Est: <strong>RM {hz.estimatedCost?.toLocaleString() || '2,000'}</strong></span>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  );
-                })()}
-              </div>
-
-              {/* ── Overgrown Vegetation ── */}
-              <div className="p-6 rounded-xl bg-white border border-slate-200 shadow-sm space-y-4">
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900">Overgrown Vegetation</h3>
-                </div>
-
-                {(() => {
-                  const vegeHazards = hazards.filter(h => h.feedCategory === 'Overgrown Vege');
-                  if (vegeHazards.length === 0) {
-                    return <p className="text-xs text-slate-400 italic">No vegetation obstruction reports at this time.</p>;
-                  }
-                  return (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {vegeHazards.map(hz => {
-                        const isResolved = hz.status === 'Resolved';
-                        const dotColor = isResolved ? 'bg-emerald-500' : hz.severity === 'High' ? 'bg-red-500' : 'bg-yellow-400';
-                        const cardBorder = isResolved ? 'border-emerald-200' : hz.severity === 'High' ? 'border-red-300' : 'border-yellow-300';
-                        const cardBg = isResolved ? 'bg-emerald-50/40' : hz.severity === 'High' ? 'bg-red-50/60' : 'bg-yellow-50/60';
-                        return (
-                          <div
-                            key={hz.id}
-                            onClick={() => {
-                              setSelectedHazardId(hz.id);
-                              setPropertyTab('inspector');
-                            }}
-                            className={`p-3.5 rounded-xl border ${cardBorder} ${cardBg} flex gap-3 items-start cursor-pointer hover:shadow-md hover:border-[#2864A6] transition`}
-                          >
-                            {hz.figureUrl && (
-                              <img src={hz.figureUrl} alt={hz.title} className="w-16 h-16 rounded-lg object-cover border border-slate-200 shrink-0" />
-                            )}
-                            <div className="space-y-1 flex-1 min-w-0">
-                              <div className="flex items-center justify-between gap-1">
-                                <div className="flex items-center gap-1.5">
-                                  <span className={`w-2 h-2 rounded-full shrink-0 ${dotColor}`} />
-                                  <span className="font-bold text-xs text-[#142B4A]">{hz.id}</span>
-                                </div>
-                              </div>
-                              <div className="text-xs font-semibold text-slate-800 leading-snug truncate">{hz.title}</div>
-                              <div className="text-[11px] text-slate-500 truncate">{hz.location}</div>
-                              <div className="flex items-center justify-between text-[10px] pt-1">
-                                <span className="text-slate-500">Status: <strong className="text-slate-800">{hz.status}</strong></span>
-                                <span className="text-slate-500">Est: <strong>RM {hz.estimatedCost?.toLocaleString() || '800'}</strong></span>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  );
-                })()}
-              </div>
-
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
 

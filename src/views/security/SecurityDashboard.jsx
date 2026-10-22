@@ -185,7 +185,7 @@ export function SecurityDashboard() {
       {/* Main Content Area */}
       <main className="flex-1 p-6 overflow-y-auto space-y-6">
         {/* Top KPI Cards (Screen S1) */}
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
             <div className="text-xs font-semibold text-slate-500">Active Alert Signals</div>
             <div className="text-2xl font-black text-slate-900 mt-1">{totalAlerts}</div>

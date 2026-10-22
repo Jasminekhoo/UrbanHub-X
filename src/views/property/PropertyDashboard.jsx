@@ -648,14 +648,11 @@ export function PropertyDashboard() {
         <main className="flex-1 p-8 overflow-y-auto space-y-8">
           {/* Consolidated summary bar (formerly 5 separate metric cards) */}
           <div className="rounded-xl bg-white border border-slate-200 shadow-sm overflow-hidden">
-            <div className="flex flex-col sm:flex-row sm:items-stretch">
-              {summaryMetrics.map((m, idx) => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-px bg-slate-200">
+              {summaryMetrics.map((m) => (
                 <div
                   key={m.label}
-                  className={`flex-1 min-w-[150px] px-5 py-3.5 ${idx < summaryMetrics.length - 1
-                    ? 'border-b border-slate-100 sm:border-b-0 sm:border-r sm:border-slate-200'
-                    : ''
-                    }`}
+                  className="min-w-0 bg-white px-5 py-3.5"
                 >
                   <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                     {m.label}

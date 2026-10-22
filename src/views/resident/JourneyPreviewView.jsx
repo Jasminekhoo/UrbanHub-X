@@ -33,6 +33,7 @@ export function JourneyPreviewView() {
     triggerWalkingDemo,
     journeyOrigin,
     journeyDestination,
+    setRouteCategory,
   } = useNightSafe();
 
   const route = routes[selectedRouteId] || routes.A;
@@ -49,8 +50,10 @@ export function JourneyPreviewView() {
 
   // Hazards / Danger on this route
   const routeHazards = hazards.filter(h => 
-    (h.routesAffected && h.routesAffected.includes(selectedRouteId)) ||
-    route.nodes.includes(h.affectedNode)
+    h.status !== 'Resolved' &&
+    (h.routesAffected
+      ? h.routesAffected.includes(selectedRouteId)
+      : route.nodes.includes(h.affectedNode))
   );
   const dangerLevel = routeHazards.some(h => h.severity === 'High') 
     ? 'High' 
@@ -164,6 +167,27 @@ export function JourneyPreviewView() {
               </div>
 
             </div>
+            {routeHazards.length > 0 && (
+              <div className="mt-1.5 border-t border-slate-100 pt-1.5 text-center">
+                <p className={`text-[9px] font-medium ${dangerLevel === 'High' ? 'text-red-600' : 'text-slate-500'}`}>
+                  {dangerLevel === 'High'
+                    ? `High-severity hazard detected: ${routeHazards.filter(h => h.severity === 'High').length} on this route.`
+                    : `${routeHazards.length} active hazard${routeHazards.length === 1 ? '' : 's'} remain on this route.`}
+                </p>
+                {dangerLevel === 'High' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRouteCategory('safest');
+                      setResidentTab('routes');
+                    }}
+                    className="mt-1 text-[9px] font-bold text-[#2864A6] underline underline-offset-2"
+                  >
+                    Find the current lowest-risk route
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
 

@@ -22,14 +22,14 @@ const CATEGORIES = [
   {
     id: 'safest',
     label: 'Safest',
-    badge: '88/100',
+    badge: 'Recommended',
     icon: ShieldCheck,
     routeId: 'A',
     activeColor: 'bg-emerald-600 text-white border-emerald-600 shadow-sm',
     inactiveColor: 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50',
     iconColor: 'text-emerald-600',
     ringColor: 'ring-emerald-500',
-    summary: 'Focuses on maximum lighting (94%), clear sightlines & active guard corridor.',
+    summary: 'Selects the route with the fewest active high-severity hazards, then compares safety scores.',
   },
   {
     id: 'fastest',
@@ -179,6 +179,8 @@ export function RouteComparisonView() {
       h.status !== 'Resolved' &&
       ((h.routesAffected && h.routesAffected.includes(route.id)) || (route.id === 'A' && h.affectedNode === 'L-04') || (route.id === 'B' && h.affectedNode === 'L-06'))
     );
+    const highSeverityHazards = activeRouteHazards.filter(h => h.severity === 'High').length;
+    const mediumSeverityHazards = activeRouteHazards.filter(h => h.severity === 'Medium').length;
 
     const hazardCountText = activeRouteHazards.length === 0 
       ? '0 hazards' 
@@ -187,6 +189,12 @@ export function RouteComparisonView() {
     return {
       ...route,
       safetyScore: normalizedSafetyScore,
+      activeRouteHazards,
+      highSeverityHazards,
+      mediumSeverityHazards,
+      reason: highSeverityHazards > 0
+        ? `${activeRouteHazards.length} active hazards remain, including ${highSeverityHazards} high-severity hazard${highSeverityHazards === 1 ? '' : 's'}.`
+        : route.reason,
       metrics: route.metrics.map(m => {
         if (m.label === 'Known Hazards') {
           return {
@@ -209,22 +217,36 @@ export function RouteComparisonView() {
     };
   });
 
+  const safestRoute = [...dynamicRoutes].sort((a, b) =>
+    a.highSeverityHazards - b.highSeverityHazards ||
+    a.mediumSeverityHazards - b.mediumSeverityHazards ||
+    b.safetyScore - a.safetyScore
+  )[0];
+  const categories = CATEGORIES.map(category => category.id === 'safest'
+    ? {
+        ...category,
+        routeId: safestRoute.id,
+        badge: `Route ${safestRoute.id}`,
+        summary: `Currently the lowest-risk option: ${safestRoute.highSeverityHazards} active high-severity and ${safestRoute.mediumSeverityHazards} medium-severity hazards.`
+      }
+    : category
+  );
+
   // Keep in sync with parent context if changed externally
   useEffect(() => {
-    if (routeCategory && routeCategory !== activeCategory) {
-      setActiveCategory(routeCategory);
-      const matched = CATEGORIES.find(c => c.id === routeCategory);
-      if (matched) {
-        setSelected(matched.routeId);
-        setSelectedRouteId(matched.routeId);
-      }
+    const category = routeCategory || 'safest';
+    setActiveCategory(category);
+    const matched = categories.find(c => c.id === category);
+    if (matched) {
+      setSelected(matched.routeId);
+      if (selectedRouteId !== matched.routeId) setSelectedRouteId(matched.routeId);
     }
-  }, [routeCategory]);
+  }, [routeCategory, safestRoute.id]);
 
   const handleCategorySelect = (catId) => {
     setActiveCategory(catId);
     if (setRouteCategory) setRouteCategory(catId);
-    const matched = CATEGORIES.find(c => c.id === catId);
+    const matched = categories.find(c => c.id === catId);
     if (matched) {
       setSelected(matched.routeId);
       setSelectedRouteId(matched.routeId);
@@ -247,12 +269,15 @@ export function RouteComparisonView() {
 
   // Re-order routes so the chosen category's recommended route is shown first
   const sortedRoutes = [...dynamicRoutes].sort((a, b) => {
-    if (a.category === activeCategory) return -1;
-    if (b.category === activeCategory) return 1;
+    const preferredRouteId = activeCategory === 'safest'
+      ? safestRoute.id
+      : categories.find(c => c.id === activeCategory)?.routeId;
+    if (a.id === preferredRouteId) return -1;
+    if (b.id === preferredRouteId) return 1;
     return 0;
   });
 
-  const activeCategoryObj = CATEGORIES.find(c => c.id === activeCategory) || CATEGORIES[0];
+  const activeCategoryObj = categories.find(c => c.id === activeCategory) || categories[0];
 
   return (
     <div className="flex flex-col h-full bg-[#F5F7FA]">
@@ -296,7 +321,7 @@ export function RouteComparisonView() {
 
         {/* Category Buttons (Safest / Fastest / Shortest) */}
         <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100/90 rounded-xl border border-slate-200/70">
-          {CATEGORIES.map((cat) => {
+          {categories.map((cat) => {
             const isActive = activeCategory === cat.id;
             const Icon = cat.icon;
             return (
@@ -372,9 +397,9 @@ export function RouteComparisonView() {
               }`}
             >
               {/* Recommended badge */}
-              {route.recommended && (
+              {route.id === safestRoute.id && (
                 <div className="absolute -top-2.5 left-4 px-2.5 py-0.5 rounded-full bg-emerald-600 text-white text-[9px] font-bold uppercase tracking-wider shadow-sm">
-                  âœ¦ Recommended
+                  Lowest Current Risk
                 </div>
               )}
 

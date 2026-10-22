@@ -53,7 +53,9 @@ export function SecurityDashboard() {
   const formatAlertStatus = (status) =>
     typeof status === 'string' ? status.replace(/\s*[—–-]\s*demo\s*$/i, '').trim() : status;
 
-  const isResolvedStatus = (status) => formatAlertStatus(status) === 'Resolved';
+  const getAlertStatusKey = (status) =>
+    typeof status === 'string' ? formatAlertStatus(status).toLowerCase() : '';
+  const isResolvedStatus = (status) => getAlertStatusKey(status) === 'resolved';
 
   const GUARDS = [
     { id: 'GRD-01', name: 'Officer Hafiz Rahman', sector: 'Sector A  —  Main Avenue', status: 'Available', distance: '~80m from L-04' },
@@ -76,8 +78,8 @@ export function SecurityDashboard() {
 
   // Stats calculation
   const totalAlerts = alerts.length;
-  const awaitingAck = alerts.filter(a => a.status === 'Awaiting security acknowledgement').length;
-  const inProgress = alerts.filter(a => a.status === 'Response in progress' || a.status === 'Acknowledged').length;
+  const awaitingAck = alerts.filter(a => getAlertStatusKey(a.status) === 'awaiting security acknowledgement').length;
+  const inProgress = alerts.filter(a => getAlertStatusKey(a.status) === 'response in progress').length;
   const resolved = alerts.filter(a => isResolvedStatus(a.status)).length;
 
   return (
@@ -698,4 +700,3 @@ export function SecurityDashboard() {
     </div>
   );
 }
-

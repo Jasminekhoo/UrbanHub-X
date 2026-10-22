@@ -236,7 +236,10 @@ export function PropertyDashboard() {
 
   // Statistics
   const openHazards = hazards.length;
-  const highPriority = hazards.filter(h => h.severity === 'High' && h.status !== 'Resolved').length;
+  const highPriority = hazards.filter(hazard =>
+    hazard.status !== 'Resolved' &&
+    calculateHazardPriorityScore(hazard, priorityWeights) >= 80
+  ).length;
   const awaitingVerification = hazards.filter(h => h.status === 'Under verification').length;
 
   // Consolidated summary-bar metrics (replaces the 5 standalone metric cards)

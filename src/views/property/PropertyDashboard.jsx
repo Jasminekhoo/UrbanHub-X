@@ -245,7 +245,7 @@ export function PropertyDashboard() {
     { label: 'High-Priority Items', value: highPriority, valueTone: 'text-[#C83E4D]', hintTone: 'text-red-600' },
     { label: 'Awaiting Verification', value: awaitingVerification, valueTone: 'text-amber-600', hintTone: 'text-amber-600' },
     { label: 'Illustrative Budget', value: `RM ${budget.toLocaleString()}`, valueTone: 'text-[#2864A6]', hintTone: 'text-sky-600' },
-    { label: 'Modelled Route Cost Î”C', value: planApplied ? `-${routeACost.delta} pts` : '0 pts', valueTone: 'text-emerald-600', hintTone: 'text-emerald-600' }
+    { label: 'Modelled Route Cost Change', value: planApplied ? `-${routeACost.delta} pts` : '0 pts', valueTone: 'text-emerald-600', hintTone: 'text-emerald-600' }
   ];
 
   // Filtered reports
@@ -1598,11 +1598,11 @@ export function PropertyDashboard() {
                                 </span>
                                 {isImprovedA ? (
                                   <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200">
-                                    Î” -{deltaA}
+                                    Change -{deltaA}
                                   </span>
                                 ) : (
                                   <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-100 text-slate-500">
-                                    Î” 0
+                                    Change 0
                                   </span>
                                 )}
                               </div>
@@ -1636,7 +1636,7 @@ export function PropertyDashboard() {
                               : 'bg-white border-slate-200 text-slate-600'
                           }`}>
                             {isImprovedA ? (
-                              <span>âœ“ Luminaire L-04 repaired, restoring continuous illumination.</span>
+                              <span>Luminaire L-04 repaired, restoring continuous illumination.</span>
                             ) : (
                               <span>Baseline: 1 active lighting penalty near Central Boulevard (unaffected by this package).</span>
                             )}
@@ -1678,11 +1678,11 @@ export function PropertyDashboard() {
                                 </span>
                                 {isImprovedB ? (
                                   <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200">
-                                    Î” -{deltaB}
+                                    Change -{deltaB}
                                   </span>
                                 ) : (
                                   <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-100 text-slate-500">
-                                    Î” 0
+                                    Change 0
                                   </span>
                                 )}
                               </div>
@@ -1720,7 +1720,7 @@ export function PropertyDashboard() {
                               : 'bg-white border-slate-200 text-slate-600'
                           }`}>
                             {isImprovedB ? (
-                              <span>âœ“ Model improvements applied across Garden Shortcut.</span>
+                              <span>Model improvements applied across Garden Shortcut.</span>
                             ) : (
                               <span>Baseline: Multiple impediments unaddressed across unlit garden pathway.</span>
                             )}
@@ -1781,7 +1781,7 @@ export function PropertyDashboard() {
 
                   {/* Scientific Caveat Banner */}
                   <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 text-[11px] text-slate-500 leading-relaxed">
-                    <span className="font-bold text-slate-700">Modelled Metric Note:</span> Î”C represents simulated reduction in environmental penalty indices under prototype assumptions. It is not an empirical guarantee of incident elimination.
+                    <span className="font-bold text-slate-700">Modelled Metric Note:</span> Route cost change represents simulated reduction in environmental penalty indices under prototype assumptions. It is not an empirical guarantee of incident elimination.
                   </div>
                 </div>
               </div>

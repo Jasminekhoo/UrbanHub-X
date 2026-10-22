@@ -1,7 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect, useMemo } from 'react';
 import { useNightSafe } from '../../context/NightSafeContext';
 import { GoogleMapsTownshipView } from '../../components/GoogleMapsTownshipView';
 import { calculateRouteCost } from '../../data/nightSafeData';
+import {
+  DEMO_ROUTE_DESTINATION,
+  DEMO_ROUTE_ORIGIN,
+  ROUTE_LOCATION_COORDS,
+} from '../../data/elminaRouteLocations';
+import { HAZARD_COORDINATES, NODE_COORDINATES } from '../../data/elminaGeoData';
 import {
   Clock,
   Ruler,
@@ -29,7 +35,6 @@ const CATEGORIES = [
     inactiveColor: 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50',
     iconColor: 'text-emerald-600',
     ringColor: 'ring-emerald-500',
-    summary: 'Selects the route with the fewest active high-severity hazards, then compares safety scores.',
   },
   {
     id: 'fastest',
@@ -41,7 +46,6 @@ const CATEGORIES = [
     inactiveColor: 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50',
     iconColor: 'text-amber-500',
     ringColor: 'ring-amber-400',
-    summary: 'Direct cut-through. Saves ~3 mins but has lower lighting and uneven pavement.',
   },
   {
     id: 'shortest',
@@ -53,7 +57,6 @@ const CATEGORIES = [
     inactiveColor: 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50',
     iconColor: 'text-[#2864A6]',
     ringColor: 'ring-[#2864A6]',
-    summary: 'Minimum walking steps (~650 steps) through internal residential courtyard link.',
   },
 ];
 
@@ -149,6 +152,95 @@ const safetyColor = (score) => {
   return 'text-rose-600';
 };
 
+const haversineMeters = (a, b) => {
+  const radians = degrees => degrees * Math.PI / 180;
+  const latDelta = radians(b.lat - a.lat);
+  const lngDelta = radians(b.lng - a.lng);
+  const value = Math.sin(latDelta / 2) ** 2 +
+    Math.cos(radians(a.lat)) * Math.cos(radians(b.lat)) * Math.sin(lngDelta / 2) ** 2;
+  return 6371000 * 2 * Math.atan2(Math.sqrt(value), Math.sqrt(1 - value));
+};
+
+const sampleRoute = path => {
+  const samples = path.length ? [path[0]] : [];
+  path.slice(1).forEach((point, index) => {
+    const previous = path[index];
+    const segmentLength = haversineMeters(previous, point);
+    const steps = Math.max(1, Math.ceil(segmentLength / 30));
+    for (let step = 1; step <= steps; step += 1) {
+      const ratio = step / steps;
+      samples.push({
+        lat: previous.lat + (point.lat - previous.lat) * ratio,
+        lng: previous.lng + (point.lng - previous.lng) * ratio,
+      });
+    }
+  });
+  return samples;
+};
+
+const measureRoadSafety = (route, hazards, activeLamps) => {
+  const pathSamples = sampleRoute(route.path);
+  const mappedHazards = hazards
+    .filter(hazard => hazard.status !== 'Resolved')
+    .map(hazard => ({
+      ...hazard,
+      coordinates: HAZARD_COORDINATES[hazard.id] || NODE_COORDINATES[hazard.affectedNode],
+    }))
+    .filter(hazard => hazard.coordinates);
+  const nearbyHazards = mappedHazards.filter(hazard =>
+    pathSamples.some(point => haversineMeters(point, hazard.coordinates) <= 35)
+  );
+  const activeLampLocations = activeLamps
+    .map(lampId => NODE_COORDINATES[lampId])
+    .filter(Boolean);
+  const litSamples = activeLampLocations.length
+    ? pathSamples.filter(point =>
+        activeLampLocations.some(lamp => haversineMeters(point, lamp) <= 45)
+      ).length
+    : 0;
+  const lightingCoverage = pathSamples.length
+    ? Math.round((litSamples / pathSamples.length) * 100)
+    : 0;
+  const hazardPenalty = nearbyHazards.reduce((total, hazard) => {
+    if (hazard.severity === 'High') return total + 24;
+    if (hazard.severity === 'Medium') return total + 12;
+    return total + 6;
+  }, 0);
+  const safetyScore = Math.max(
+    0,
+    Math.min(100, Math.round(100 - hazardPenalty - (100 - lightingCoverage) * 0.22))
+  );
+
+  return {
+    safetyScore,
+    nearbyHazards,
+    lightingCoverage,
+  };
+};
+
+const sortRoutesForCategory = (routes, categoryId, hasCustomEndpoints) =>
+  [...routes].sort((a, b) => {
+    if (categoryId === 'fastest') {
+      return a.etaMin - b.etaMin ||
+        a.distanceKm - b.distanceKm ||
+        b.safetyScore - a.safetyScore;
+    }
+    if (categoryId === 'shortest') {
+      return a.distanceKm - b.distanceKm ||
+        a.etaMin - b.etaMin ||
+        b.safetyScore - a.safetyScore;
+    }
+    if (!hasCustomEndpoints) {
+      return a.highSeverityHazards - b.highSeverityHazards ||
+        a.mediumSeverityHazards - b.mediumSeverityHazards ||
+        b.safetyScore - a.safetyScore;
+    }
+    return b.safetyScore - a.safetyScore ||
+      a.nearbyHazards.length - b.nearbyHazards.length ||
+      b.lightingCoverage - a.lightingCoverage ||
+      a.etaMin - b.etaMin;
+  });
+
 export function RouteComparisonView() {
   const {
     setResidentTab,
@@ -161,15 +253,70 @@ export function RouteComparisonView() {
     hazards,
     appliedInterventions,
     journeyOrigin,
-    journeyDestination
+    journeyDestination,
+    demoRouteFallback,
+    setDemoRouteFallback
   } = useNightSafe();
   
   // Initialize from context or routeId
   const [activeCategory, setActiveCategory] = useState(routeCategory || 'safest');
   const [selected, setSelected] = useState(selectedRouteId || 'A');
-
+  const [roadRoutes, setRoadRoutes] = useState(undefined);
+  const [roadRouteFailures, setRoadRouteFailures] = useState(0);
+  const hasCustomEndpoints = Boolean(ROUTE_LOCATION_COORDS[journeyOrigin] && ROUTE_LOCATION_COORDS[journeyDestination]);
+  const isUsingCustomRoutes = hasCustomEndpoints && !demoRouteFallback;
+  const handleRoadRoutes = useCallback((routes, failureCount = 0) => {
+    setRoadRoutes(routes);
+    setRoadRouteFailures(failureCount);
+    const hasThreeRoutes = Array.isArray(routes) && routes.length >= 3;
+    setDemoRouteFallback(hasCustomEndpoints && !hasThreeRoutes);
+  }, [hasCustomEndpoints, setDemoRouteFallback]);
+  const fromPin = useMemo(
+    () => ({ ...ROUTE_LOCATION_COORDS[journeyOrigin], label: journeyOrigin }),
+    [journeyOrigin]
+  );
+  const toPin = useMemo(
+    () => ({ ...ROUTE_LOCATION_COORDS[journeyDestination], label: journeyDestination }),
+    [journeyDestination]
+  );
   // Compute dynamic route safety metrics based on appliedInterventions and active hazards
-  const dynamicRoutes = ROUTE_DATA.map(route => {
+  const dynamicRoutes = isUsingCustomRoutes
+    ? (roadRoutes || []).map((roadRoute, index) => {
+      const routeId = roadRoute.routeId || ['A', 'B', 'C'][index];
+      const routeTemplate = ROUTE_DATA.find(route => route.id === routeId) || ROUTE_DATA[index];
+      const safety = measureRoadSafety(roadRoute, hazards, activeLamps);
+      return {
+        ...routeTemplate,
+        id: routeId,
+        label: `Route ${routeId}`,
+        name: routeTemplate.name,
+        type: 'Google walking route',
+        etaMin: Math.max(1, Math.ceil(roadRoute.durationMillis / 60000)),
+        distanceKm: Number((roadRoute.distanceMeters / 1000).toFixed(2)),
+        safetyScore: safety.safetyScore,
+        lightingCoverage: safety.lightingCoverage,
+        lightCoverage: safety.lightingCoverage,
+        nearbyHazards: safety.nearbyHazards,
+        metrics: [
+          {
+            icon: Lightbulb,
+            label: 'Active lamp coverage',
+            value: `${safety.lightingCoverage}% of route near active lamps`,
+            status: safety.lightingCoverage >= 70 ? 'good' : safety.lightingCoverage >= 35 ? 'caution' : 'warn',
+          },
+          {
+            icon: AlertTriangle,
+            label: 'Nearby known hazards',
+            value: `${safety.nearbyHazards.length} within 35 m`,
+            status: safety.nearbyHazards.some(hazard => hazard.severity === 'High')
+              ? 'warn'
+              : safety.nearbyHazards.length ? 'caution' : 'good',
+          },
+        ],
+        reason: 'Estimated from active lamp locations and mapped, unresolved hazards within 35 m. This is an indicative score, not a safety guarantee.',
+      };
+    })
+    : ROUTE_DATA.map(route => {
     const costData = calculateRouteCost(route.id, appliedInterventions || []);
     // Safety score formula: scale total cost inversely into 0-100 (baseline 24-40 range)
     const normalizedSafetyScore = Math.max(50, Math.min(96, Math.round(100 - (costData.totalCost * 1.3))));
@@ -217,23 +364,38 @@ export function RouteComparisonView() {
     };
   });
 
-  const safestRoute = [...dynamicRoutes].sort((a, b) =>
-    a.highSeverityHazards - b.highSeverityHazards ||
-    a.mediumSeverityHazards - b.mediumSeverityHazards ||
-    b.safetyScore - a.safetyScore
-  )[0];
-  const categories = CATEGORIES.map(category => category.id === 'safest'
-    ? {
+  const safestRoute = sortRoutesForCategory(dynamicRoutes, 'safest', isUsingCustomRoutes)[0] || ROUTE_DATA[0];
+  const fastestRoute = sortRoutesForCategory(dynamicRoutes, 'fastest', isUsingCustomRoutes)[0] || ROUTE_DATA[1];
+  const shortestRoute = sortRoutesForCategory(dynamicRoutes, 'shortest', isUsingCustomRoutes)[0] || ROUTE_DATA[2];
+  const categoryRoutes = {
+    safest: safestRoute,
+    fastest: fastestRoute,
+    shortest: shortestRoute,
+  };
+  const categories = CATEGORIES.map(category => {
+    const candidate = categoryRoutes[category.id];
+    if (isUsingCustomRoutes && !dynamicRoutes.length) {
+      return {
         ...category,
-        routeId: safestRoute.id,
-        badge: `Route ${safestRoute.id}`,
-        summary: `Currently the lowest-risk option: ${safestRoute.highSeverityHazards} active high-severity and ${safestRoute.mediumSeverityHazards} medium-severity hazards.`
-      }
-    : category
-  );
+        routeId: null,
+        badge: roadRoutes === undefined ? 'Finding…' : 'Unavailable',
+      };
+    }
+    if (!isUsingCustomRoutes) {
+      return category.id === 'safest'
+        ? {
+            ...category,
+            routeId: safestRoute.id,
+            badge: `Route ${safestRoute.id}`,
+          }
+        : category;
+    }
+    return { ...category, routeId: candidate.id, badge: `Route ${candidate.id}` };
+  });
 
   // Keep in sync with parent context if changed externally
   useEffect(() => {
+    if (isUsingCustomRoutes) return;
     const category = routeCategory || 'safest';
     setActiveCategory(category);
     const matched = categories.find(c => c.id === category);
@@ -241,13 +403,22 @@ export function RouteComparisonView() {
       setSelected(matched.routeId);
       if (selectedRouteId !== matched.routeId) setSelectedRouteId(matched.routeId);
     }
-  }, [routeCategory, safestRoute.id]);
+  }, [isUsingCustomRoutes, routeCategory, safestRoute.id]);
+
+  useEffect(() => {
+    if (!isUsingCustomRoutes || !dynamicRoutes.length) return;
+    const recommendedRouteId = categories.find(category => category.id === activeCategory)?.routeId;
+    if (recommendedRouteId && dynamicRoutes.some(route => route.id === recommendedRouteId)) {
+      setSelected(recommendedRouteId);
+      setSelectedRouteId(recommendedRouteId);
+    }
+  }, [isUsingCustomRoutes, roadRoutes, activeCategory, setSelectedRouteId]);
 
   const handleCategorySelect = (catId) => {
     setActiveCategory(catId);
     if (setRouteCategory) setRouteCategory(catId);
     const matched = categories.find(c => c.id === catId);
-    if (matched) {
+    if (matched?.routeId) {
       setSelected(matched.routeId);
       setSelectedRouteId(matched.routeId);
     }
@@ -256,8 +427,6 @@ export function RouteComparisonView() {
   const handleRouteCardClick = (route) => {
     setSelected(route.id);
     setSelectedRouteId(route.id);
-    setActiveCategory(route.category);
-    if (setRouteCategory) setRouteCategory(route.category);
   };
 
   const handleChoose = (id) => {
@@ -267,17 +436,10 @@ export function RouteComparisonView() {
     setResidentTab('journey');
   };
 
-  // Re-order routes so the chosen category's recommended route is shown first
-  const sortedRoutes = [...dynamicRoutes].sort((a, b) => {
-    const preferredRouteId = activeCategory === 'safest'
-      ? safestRoute.id
-      : categories.find(c => c.id === activeCategory)?.routeId;
-    if (a.id === preferredRouteId) return -1;
-    if (b.id === preferredRouteId) return 1;
-    return 0;
-  });
-
-  const activeCategoryObj = categories.find(c => c.id === activeCategory) || categories[0];
+  const activeCategoryLabel = categories.find(category => category.id === activeCategory)?.label || 'Safest';
+  const sortedRoutes = sortRoutesForCategory(dynamicRoutes, activeCategory, isUsingCustomRoutes);
+  const routeOriginLabel = demoRouteFallback ? DEMO_ROUTE_ORIGIN : journeyOrigin;
+  const routeDestinationLabel = demoRouteFallback ? DEMO_ROUTE_DESTINATION : journeyDestination;
 
   return (
     <div className="flex flex-col h-full bg-[#F5F7FA]">
@@ -292,15 +454,19 @@ export function RouteComparisonView() {
             <ArrowLeft className="w-3.5 h-3.5 text-slate-600" />
           </button>
           <div>
-            <span className="text-xs font-bold text-slate-800">Choose a Safe Route</span>
-            <span className="block text-[9px] text-slate-400 font-medium">Elmina Township · Real-time NightSafe</span>
+            <span className="text-xs font-bold text-slate-800">
+              {isUsingCustomRoutes ? 'Choose a Walking Route' : 'Choose a Safe Route'}
+            </span>
+            <span className="block text-[9px] text-slate-400 font-medium">
+              {isUsingCustomRoutes ? 'Google Maps road routes' : demoRouteFallback ? 'Fixed Elmina demo route' : 'Elmina Township · Real-time NightSafe'}
+            </span>
           </div>
         </div>
-        {journeyOrigin && journeyDestination && (
+        {(journeyOrigin && journeyDestination || demoRouteFallback) && (
           <div className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white border border-slate-200 shadow-xs text-[9px] font-semibold text-slate-600 max-w-[170px] truncate">
-            <span className="truncate text-slate-900">{journeyOrigin.split(',')[0]}</span>
+            <span className="truncate text-slate-900">{routeOriginLabel.split(',')[0]}</span>
             <span className="text-[#2864A6]">→</span>
-            <span className="truncate text-[#2864A6]">{journeyDestination.split(',')[0]}</span>
+            <span className="truncate text-[#2864A6]">{routeDestinationLabel.split(',')[0]}</span>
           </div>
         )}
       </div>
@@ -328,6 +494,7 @@ export function RouteComparisonView() {
               <button
                 key={cat.id}
                 onClick={() => handleCategorySelect(cat.id)}
+                disabled={isUsingCustomRoutes && !dynamicRoutes.length}
                 className={`relative flex flex-col items-center justify-center py-2 px-1.5 rounded-lg border text-center transition-all ${
                   isActive
                     ? cat.activeColor
@@ -351,14 +518,6 @@ export function RouteComparisonView() {
           })}
         </div>
 
-        {/* Dynamic Category Context Hint */}
-        <div className="mt-2 px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-200 flex items-start gap-1.5 text-[10px] text-slate-600">
-          <activeCategoryObj.icon className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${activeCategoryObj.iconColor}`} />
-          <p className="leading-snug">
-            <span className="font-bold text-slate-800">{activeCategoryObj.label} Mode: </span>
-            {activeCategoryObj.summary}
-          </p>
-        </div>
       </div>
 
       {/* â”€â”€ Route Google Maps Preview â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
@@ -366,6 +525,9 @@ export function RouteComparisonView() {
         <GoogleMapsTownshipView
           theme="day"
           selectedRoute={selected}
+          fromPin={isUsingCustomRoutes ? fromPin : null}
+          toPin={isUsingCustomRoutes ? toPin : null}
+          onRoadRoutes={isUsingCustomRoutes ? handleRoadRoutes : null}
           activeLamps={activeLamps}
           hazards={hazards}
           height="100%"
@@ -376,13 +538,38 @@ export function RouteComparisonView() {
           <span className={`w-2 h-2 rounded-full ${
             selected === 'A' ? 'bg-emerald-500' : selected === 'B' ? 'bg-amber-500' : 'bg-[#2864A6]'
           }`} />
-          <span className="text-[10px] font-bold text-slate-800">Route {selected} Preview  ·  Google Maps</span>
+          <span className="text-[10px] font-bold text-slate-800">
+            {`Route ${selected}`} Preview · {isUsingCustomRoutes ? 'Google Maps' : demoRouteFallback ? 'Demo' : 'Elmina'}
+          </span>
         </div>
       </div>
 
       {/* â”€â”€ Scrollable Route Cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="flex-1 overflow-y-auto px-4 pt-3 pb-6 space-y-3.5">
-        {sortedRoutes.map((route) => {
+        {isUsingCustomRoutes && roadRoutes === undefined && (
+          <p className="rounded-xl bg-white p-4 text-center text-xs text-slate-500">Finding walking routes on mapped roads…</p>
+        )}
+        {isUsingCustomRoutes && roadRoutes === null && (
+          <p className="rounded-xl bg-white p-4 text-center text-xs text-slate-600">Google Maps could not load walking routes. Please try again later.</p>
+        )}
+        {isUsingCustomRoutes && Array.isArray(roadRoutes) && roadRoutes.length === 0 && (
+          <p className="rounded-xl bg-white p-4 text-center text-xs text-slate-600">
+            {roadRouteFailures
+              ? 'Google Maps could not load walking routes. Please try again later.'
+              : 'No walking route was found for these locations.'}
+          </p>
+        )}
+        {isUsingCustomRoutes && Array.isArray(roadRoutes) && roadRoutes.length > 0 && roadRouteFailures > 0 && (
+          <p className="rounded-xl bg-amber-50 p-3 text-center text-[10px] text-amber-800">
+            Some route options could not be loaded. Showing the available routes.
+          </p>
+        )}
+        {demoRouteFallback && (
+          <p className="rounded-xl bg-amber-50 p-3 text-center text-[10px] text-amber-800">
+            Custom routes are unavailable. Showing demo routes from {DEMO_ROUTE_ORIGIN} to {DEMO_ROUTE_DESTINATION}; these do not match your selected locations.
+          </p>
+        )}
+        {sortedRoutes.map((route, index) => {
           const isSelected = selected === route.id;
           const c = colorMap[route.color] || colorMap.blue;
 
@@ -397,7 +584,13 @@ export function RouteComparisonView() {
               }`}
             >
               {/* Recommended badge */}
-              {route.id === safestRoute.id && (
+              {isUsingCustomRoutes ? (
+                <div className="absolute -top-2.5 left-4 px-2.5 py-0.5 rounded-full bg-white border border-slate-200 text-slate-700 text-[9px] font-bold uppercase tracking-wider shadow-sm">
+                  {index === 0
+                    ? `#1 Best match · ${activeCategoryLabel}`
+                    : `#${index + 1} · ${activeCategoryLabel} priority`}
+                </div>
+              ) : route.id === safestRoute.id && (
                 <div className="absolute -top-2.5 left-4 px-2.5 py-0.5 rounded-full bg-emerald-600 text-white text-[9px] font-bold uppercase tracking-wider shadow-sm">
                   Lowest Current Risk
                 </div>
@@ -420,11 +613,22 @@ export function RouteComparisonView() {
 
                   {/* Safety score */}
                   <div className="text-right">
-                    <div className={`text-lg font-extrabold leading-tight ${safetyColor(route.safetyScore)}`}>
-                      {route.safetyScore}
-                      <span className="text-[10px] font-semibold text-slate-400">/100</span>
-                    </div>
-                    <div className="text-[9px] text-slate-400 font-medium">Safety Score</div>
+                    {route.safetyScore === null ? (
+                      <>
+                        <div className="text-xs font-bold text-slate-500">Unknown</div>
+                        <div className="text-[9px] text-slate-400 font-medium">Safety</div>
+                      </>
+                    ) : (
+                      <>
+                        <div className={`text-lg font-extrabold leading-tight ${safetyColor(route.safetyScore)}`}>
+                          {route.safetyScore}
+                          <span className="text-[10px] font-semibold text-slate-400">/100</span>
+                        </div>
+                        <div className="text-[9px] text-slate-400 font-medium">
+                          {isUsingCustomRoutes ? 'Estimated safety' : 'Safety Score'}
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -432,12 +636,12 @@ export function RouteComparisonView() {
                 <div className="flex items-center gap-0 bg-slate-50 rounded-xl overflow-hidden border border-slate-100">
                   <div className="flex-1 flex flex-col items-center py-2 border-r border-slate-100">
                     <Clock className="w-3.5 h-3.5 text-slate-400 mb-0.5" />
-                    <span className="text-xs font-bold text-slate-800">{route.etaMin} min</span>
+                    <span className="text-xs font-bold text-slate-800">{route.etaMin ? `${route.etaMin} min` : '—'}</span>
                     <span className="text-[9px] text-slate-400">ETA</span>
                   </div>
                   <div className="flex-1 flex flex-col items-center py-2 border-r border-slate-100">
                     <Ruler className="w-3.5 h-3.5 text-slate-400 mb-0.5" />
-                    <span className="text-xs font-bold text-slate-800">{route.distanceKm} km</span>
+                    <span className="text-xs font-bold text-slate-800">{route.distanceKm ? `${route.distanceKm} km` : '—'}</span>
                     <span className="text-[9px] text-slate-400">Distance</span>
                   </div>
                   <div className="flex-1 flex flex-col items-center py-2">

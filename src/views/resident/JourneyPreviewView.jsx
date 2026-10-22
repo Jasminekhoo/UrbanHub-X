@@ -1,6 +1,11 @@
-import React, { useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useNightSafe } from '../../context/NightSafeContext';
 import { GoogleMapsTownshipView } from '../../components/GoogleMapsTownshipView';
+import {
+  DEMO_ROUTE_DESTINATION,
+  DEMO_ROUTE_ORIGIN,
+  ROUTE_LOCATION_COORDS,
+} from '../../data/elminaRouteLocations';
 import { 
   Lightbulb, 
   MapPin, 
@@ -33,29 +38,62 @@ export function JourneyPreviewView() {
     triggerWalkingDemo,
     journeyOrigin,
     journeyDestination,
+    demoRouteFallback,
     setRouteCategory,
   } = useNightSafe();
 
+  const [roadMetrics, setRoadMetrics] = useState(null);
+  const hasCustomEndpoints = Boolean(journeyOrigin && journeyDestination) && !demoRouteFallback;
+  const handleRoadRoutes = useCallback(routes => {
+    const routeDetails = routes?.find(route => route.routeId === selectedRouteId);
+    setRoadMetrics(routeDetails
+      ? {
+          etaMin: Math.max(1, Math.ceil(routeDetails.durationMillis / 60000)),
+          distanceMeters: routeDetails.distanceMeters,
+        }
+      : null
+    );
+  }, [selectedRouteId]);
   const route = routes[selectedRouteId] || routes.A;
+  const fromPin = useMemo(
+    () => ({ ...ROUTE_LOCATION_COORDS[journeyOrigin], label: journeyOrigin }),
+    [journeyOrigin]
+  );
+  const toPin = useMemo(
+    () => ({ ...ROUTE_LOCATION_COORDS[journeyDestination], label: journeyDestination }),
+    [journeyDestination]
+  );
   const currentNodeId = route.nodes[checkpointIndex] || route.nodes[0];
 
   // Metrics calculation
   const totalNodes = route.nodes.length;
-  const progressRatio = Math.min(checkpointIndex / Math.max(totalNodes - 1, 1), 1);
-  const remainingMinutes = Math.max(1, Math.round(route.durationMinutes * (1 - progressRatio * 0.8)));
-  const remainingDistanceKm = Math.max(0.05, (route.distanceMeters * (1 - progressRatio * 0.85) / 1000)).toFixed(2);
+  const progressRatio = hasCustomEndpoints
+    ? 0
+    : Math.min(checkpointIndex / Math.max(totalNodes - 1, 1), 1);
+  const remainingMinutes = roadMetrics
+    && hasCustomEndpoints
+    ? Math.max(1, Math.round(roadMetrics.etaMin * (1 - progressRatio * 0.8)))
+    : null;
+  const remainingDistanceKm = roadMetrics
+    && hasCustomEndpoints
+    ? Math.max(0.05, (roadMetrics.distanceMeters * (1 - progressRatio * 0.85) / 1000)).toFixed(2)
+    : null;
   
   // Static lighting coverage per route (infrastructure condition, not adaptive)
-  const lightingPercentage = selectedRouteId === 'A' ? 94 : selectedRouteId === 'B' ? 58 : 78;
+  const lightingPercentage = hasCustomEndpoints
+    ? null
+    : selectedRouteId === 'A' ? 94 : selectedRouteId === 'B' ? 58 : 78;
 
   // Hazards / Danger on this route
-  const routeHazards = hazards.filter(h => 
+  const routeHazards = hasCustomEndpoints ? [] : hazards.filter(h =>
     h.status !== 'Resolved' &&
     (h.routesAffected
       ? h.routesAffected.includes(selectedRouteId)
       : route.nodes.includes(h.affectedNode))
   );
-  const dangerLevel = routeHazards.some(h => h.severity === 'High') 
+  const dangerLevel = hasCustomEndpoints
+    ? 'Unknown'
+    : routeHazards.some(h => h.severity === 'High')
     ? 'High' 
     : routeHazards.length > 0 ? 'Moderate' : 'Low';
 
@@ -78,16 +116,18 @@ export function JourneyPreviewView() {
                 selectedRouteId === 'A' ? 'bg-emerald-500' : selectedRouteId === 'B' ? 'bg-amber-500' : 'bg-sky-500'
               } animate-pulse`} />
               <span className="text-xs font-bold text-slate-800 truncate">
-                {route.name}
+                {hasCustomEndpoints ? 'Google Walking Route' : route.name}
               </span>
               <span className="text-[10px] text-slate-400 font-mono">
                 (Route {selectedRouteId})
               </span>
             </div>
             <div className="text-[10px] text-slate-500 truncate">
-              {journeyOrigin && journeyDestination
+              {hasCustomEndpoints
                 ? `${journeyOrigin.split(',')[0]} → ${journeyDestination.split(',')[0]}`
-                : `Live Path Navigation · Node ${currentNodeId}`}
+                : demoRouteFallback
+                  ? `${DEMO_ROUTE_ORIGIN.split(',')[0]} → ${DEMO_ROUTE_DESTINATION.split(',')[0]} · Demo route`
+                  : `Live Path Navigation · Node ${currentNodeId}`}
             </div>
           </div>
         </div>
@@ -102,6 +142,9 @@ export function JourneyPreviewView() {
         <GoogleMapsTownshipView
           theme="day"
           selectedRoute={selectedRouteId}
+          fromPin={hasCustomEndpoints ? fromPin : null}
+          toPin={hasCustomEndpoints ? toPin : null}
+          onRoadRoutes={handleRoadRoutes}
           activeLamps={activeLamps}
           currentCheckpointNode={currentNodeId}
           hazards={hazards}
@@ -125,7 +168,7 @@ export function JourneyPreviewView() {
                   <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Time</span>
                 </div>
                 <span className="text-xs font-black text-slate-800 tabular-nums">
-                  {remainingMinutes} min
+                  {remainingMinutes ? `${remainingMinutes} min` : '—'}
                 </span>
               </div>
 
@@ -136,7 +179,7 @@ export function JourneyPreviewView() {
                   <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Leave</span>
                 </div>
                 <span className="text-xs font-black text-slate-800 tabular-nums">
-                  {remainingDistanceKm} km
+                  {remainingDistanceKm ? `${remainingDistanceKm} km` : '—'}
                 </span>
               </div>
 
@@ -147,7 +190,7 @@ export function JourneyPreviewView() {
                   <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Light</span>
                 </div>
                 <span className="text-xs font-black text-slate-800 tabular-nums">
-                  {lightingPercentage}%
+                  {lightingPercentage === null ? 'Unknown' : `${lightingPercentage}%`}
                 </span>
               </div>
 
@@ -155,12 +198,12 @@ export function JourneyPreviewView() {
               <div className="px-1 flex flex-col items-center justify-center">
                 <div className="flex items-center gap-1 mb-0.5">
                   <ShieldAlert className={`w-3 h-3 ${
-                    dangerLevel === 'High' ? 'text-red-500' : dangerLevel === 'Moderate' ? 'text-amber-500' : 'text-emerald-500'
+                    dangerLevel === 'High' ? 'text-red-500' : dangerLevel === 'Moderate' ? 'text-amber-500' : dangerLevel === 'Low' ? 'text-emerald-500' : 'text-slate-400'
                   }`} />
                   <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Danger</span>
                 </div>
                 <span className={`text-xs font-black ${
-                  dangerLevel === 'High' ? 'text-red-600' : dangerLevel === 'Moderate' ? 'text-amber-600' : 'text-emerald-600'
+                  dangerLevel === 'High' ? 'text-red-600' : dangerLevel === 'Moderate' ? 'text-amber-600' : dangerLevel === 'Low' ? 'text-emerald-600' : 'text-slate-500'
                 }`}>
                   {dangerLevel}
                 </span>
@@ -192,12 +235,12 @@ export function JourneyPreviewView() {
         </div>
 
         {/* Current Node Pin Overlay */}
-        <div className="absolute bottom-3 left-3 z-10 pointer-events-none">
+        {!hasCustomEndpoints && <div className="absolute bottom-3 left-3 z-10 pointer-events-none">
           <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/95 border border-slate-200 text-slate-700 text-[10px] font-bold shadow-md backdrop-blur-sm">
             <Footprints className="w-3 h-3 text-[#2864A6]" />
             <span>At Checkpoint: Node {currentNodeId}</span>
           </div>
-        </div>
+        </div>}
       </div>
 
       {/* ── Bottom Action Bar: End Journey Button ── */}

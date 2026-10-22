@@ -16,7 +16,9 @@ export function SchematicTownshipMap({
   fillContainer = false,
   showLegend = true,
   showOverlayLabels = true,
-  showHeader = true
+  showHeader = true,
+  routePaths = null,
+  hideRoutes = false
 }) {
   const isNight = theme === 'night';
 
@@ -35,6 +37,37 @@ export function SchematicTownshipMap({
 
   // Path data for Route C: L-01 (80, 280) -> Courtyard Link -> L-07 (580, 350) -> L-08 (740, 240)
   const routeCPath = "M 80 280 C 180 260, 380 260, 580 350 L 740 240";
+  const customCoordinates = Object.values(routePaths || {})
+    .flatMap(route => route?.path || [])
+    .filter(point => Number.isFinite(point.lat) && Number.isFinite(point.lng));
+  const coordinateBounds = customCoordinates.length > 0
+    ? {
+        minLat: Math.min(...customCoordinates.map(point => point.lat)),
+        maxLat: Math.max(...customCoordinates.map(point => point.lat)),
+        minLng: Math.min(...customCoordinates.map(point => point.lng)),
+        maxLng: Math.max(...customCoordinates.map(point => point.lng))
+      }
+    : null;
+  const projectPoint = point => {
+      if (!coordinateBounds) return null;
+      const latRange = coordinateBounds.maxLat - coordinateBounds.minLat || 1;
+      const lngRange = coordinateBounds.maxLng - coordinateBounds.minLng || 1;
+      return {
+        x: 80 + ((point.lng - coordinateBounds.minLng) / lngRange) * 660,
+        y: 120 + ((coordinateBounds.maxLat - point.lat) / latRange) * 260
+      };
+  };
+  const getRoutePath = (routeId, fallback) => {
+      const points = routePaths?.[routeId]?.path;
+      if (!points || points.length < 2 || !coordinateBounds) return fallback;
+      return points.map((point, index) => {
+        const projected = projectPoint(point);
+        return `${index === 0 ? 'M' : 'L'} ${projected.x} ${projected.y}`;
+      }).join(' ');
+  };
+  const displayRouteAPath = getRoutePath('A', routeAPath);
+  const displayRouteBPath = getRoutePath('B', routeBPath);
+  const displayRouteCPath = getRoutePath('C', routeCPath);
 
   // Active emergency alert check
   const hasEmergency = alerts.some(a => a.status !== 'Resolved');
@@ -125,10 +158,10 @@ export function SchematicTownshipMap({
           </g>
 
           {/* Base Road Tracks */}
-          <g fill="none">
+          {!hideRoutes && <g fill="none">
             {/* Route A base road */}
             <path
-              d={routeAPath}
+              d={displayRouteAPath}
               stroke={isNight ? '#1e293b' : '#cbd5e1'}
               strokeWidth="24"
               strokeLinecap="round"
@@ -136,7 +169,7 @@ export function SchematicTownshipMap({
             />
             {/* Route B base road */}
             <path
-              d={routeBPath}
+              d={displayRouteBPath}
               stroke={isNight ? '#1e293b' : '#cbd5e1'}
               strokeWidth="18"
               strokeLinecap="round"
@@ -144,19 +177,19 @@ export function SchematicTownshipMap({
             />
             {/* Route C base road */}
             <path
-              d={routeCPath}
+              d={displayRouteCPath}
               stroke={isNight ? '#1e293b' : '#cbd5e1'}
               strokeWidth="16"
               strokeLinecap="round"
               strokeLinejoin="round"
             />
-          </g>
+          </g>}
 
           {/* Active Highlighted Route Lines */}
-          <g fill="none">
+          {!hideRoutes && <g fill="none">
             {/* Route A Line */}
             <path
-              d={routeAPath}
+              d={displayRouteAPath}
               stroke={selectedRoute === 'A' ? '#F4B942' : (isNight ? '#334155' : '#94a3b8')}
               strokeWidth={selectedRoute === 'A' ? '7' : '3'}
               strokeLinecap="round"
@@ -167,7 +200,7 @@ export function SchematicTownshipMap({
 
             {/* Route B Line */}
             <path
-              d={routeBPath}
+              d={displayRouteBPath}
               stroke={selectedRoute === 'B' ? '#F4B942' : (isNight ? '#334155' : '#94a3b8')}
               strokeWidth={selectedRoute === 'B' ? '7' : '3'}
               strokeLinecap="round"
@@ -178,7 +211,7 @@ export function SchematicTownshipMap({
 
             {/* Route C Line */}
             <path
-              d={routeCPath}
+              d={displayRouteCPath}
               stroke={selectedRoute === 'C' ? '#F4B942' : (isNight ? '#334155' : '#94a3b8')}
               strokeWidth={selectedRoute === 'C' ? '7' : '3'}
               strokeLinecap="round"
@@ -186,10 +219,29 @@ export function SchematicTownshipMap({
               className="transition-all duration-300"
               opacity={selectedRoute && selectedRoute !== 'C' ? '0.3' : '1'}
             />
-          </g>
+          </g>}
+
+          {!hideRoutes && routePaths?.[selectedRoute]?.path?.length > 1 && (
+            <g pointerEvents="none">
+              {[
+                { point: routePaths[selectedRoute].path[0], label: 'S', color: '#2864A6' },
+                { point: routePaths[selectedRoute].path[routePaths[selectedRoute].path.length - 1], label: 'D', color: '#ef4444' }
+              ].map(({ point, label, color }) => {
+                const projected = projectPoint(point);
+                return (
+                  <g key={label}>
+                    <circle cx={projected.x} cy={projected.y} r="11" fill={color} stroke="#ffffff" strokeWidth="3" />
+                    <text x={projected.x} y={projected.y + 4} fill="#ffffff" fontSize="10" fontWeight="700" textAnchor="middle">
+                      {label}
+                    </text>
+                  </g>
+                );
+              })}
+            </g>
+          )}
 
           {/* Route Direction Arrows / Text */}
-          <g fontSize="11" fontWeight="600">
+          {!hideRoutes && <g fontSize="11" fontWeight="600">
             {/* Route A Label */}
             <text
               x="320"
@@ -219,7 +271,7 @@ export function SchematicTownshipMap({
             >
               Route C: Courtyard Link (8 min Â· Shortest 520m)
             </text>
-          </g>
+          </g>}
 
           {/* Lamp Radiance Cones / Illumination halos */}
           <g>

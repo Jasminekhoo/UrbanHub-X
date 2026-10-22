@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNightSafe } from '../../context/NightSafeContext';
 import {
+  Bell,
   PhoneCall,
   MapPin,
   ShieldCheck,
@@ -20,10 +21,10 @@ const PIN_LENGTH    = 4;
 const ETA_START_SEC = 4 * 60 + 15;
 
 const LIVE_UPDATES = [
-  { delay: 0,    icon: 'ðŸ””', text: 'Alert received by Security Operations' },
-  { delay: 2000, icon: 'ðŸ“', text: 'Your location shared with duty officer' },
-  { delay: 5000, icon: 'ðŸš”', text: 'Officer dispatched  —  en route to your location' },
-  { delay: 9000, icon: 'ðŸ›¡ï¸', text: 'Security team monitoring your location' },
+  { delay: 0,    icon: Bell, text: 'Alert received by Security Operations' },
+  { delay: 2000, icon: MapPin, text: 'Your location shared with duty officer' },
+  { delay: 5000, icon: PhoneCall, text: 'Officer dispatched — en route to your location' },
+  { delay: 9000, icon: ShieldCheck, text: 'Security team monitoring your location' },
 ];
 
 // â”€â”€ Web Audio siren â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -196,7 +197,7 @@ export function SOSModal({ alertId, onClose }) {
       setShownUpdates(prev => {
         const text = `Officer assigned: ${canonicalAlert.assignedGuard} en route`;
         if (prev.some(u => u.text === text)) return prev;
-        return [...prev, { icon: '🚔', text }];
+        return [...prev, { icon: ShieldCheck, text }];
       });
     }
   }, [canonicalAlert?.assignedGuard]);
@@ -238,7 +239,7 @@ export function SOSModal({ alertId, onClose }) {
     } else if (duressEnabled && entered === duressPin) {
       if (alertId) addAlertNote(
         alertId,
-        'âš ï¸ Resident entered DURESS PIN  —  covert fake cancellation. Maintain full response, do NOT stand down'
+        'Warning: Resident entered the duress PIN (covert fake cancellation). Maintain full response; do not stand down.'
       );
       stopAlarmRef.current?.();
       showToast('SOS cancelled.', 'info');
@@ -334,12 +335,12 @@ export function SOSModal({ alertId, onClose }) {
           {shownUpdates.length === 0 && (
             <div className="flex items-center gap-2 text-slate-400 text-xs">
               <Loader2 className="w-3 h-3 animate-spin" />
-              <span>Connecting to security operationsâ€¦</span>
+              <span>Connecting to security operations...</span>
             </div>
           )}
           {shownUpdates.map((u, i) => (
             <div key={i} className="flex items-start gap-2 animate-fade-in">
-              <span className="text-sm leading-none mt-0.5">{u.icon}</span>
+              <u.icon className="w-3.5 h-3.5 mt-0.5 shrink-0 text-[#2864A6]" />
               <span className="text-[11px] text-slate-700 leading-relaxed">{u.text}</span>
             </div>
           ))}

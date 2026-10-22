@@ -1,8 +1,14 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { loadGoogleMapsScript, resetGoogleMapsLoader, isGoogleMapsReady } from '../utils/googleMapsLoader';
+import { loadGoogleMapsScript } from '../utils/googleMapsLoader';
 import { ELMINA_CENTER, NODE_COORDINATES, ROUTE_GPS_PATHS, HAZARD_COORDINATES } from '../data/elminaGeoData';
-import { findPedestrianRoute } from '../utils/pedestrianRouter';
 import { SchematicTownshipMap } from './SchematicTownshipMap';
+
+const ROUTE_WAYPOINTS = {
+  A: [{ lat: 3.18931, lng: 101.51981 }],
+  B: [{ lat: 3.18391, lng: 101.51945 }],
+  C: [{ lat: 3.18713, lng: 101.51676 }],
+};
+const WALKING_ROUTE_CACHE = new Map();
 
 export function GoogleMapsTownshipView({
   theme = 'day',
@@ -20,14 +26,14 @@ export function GoogleMapsTownshipView({
   fromPin = null,  // { lat, lng, label }
   toPin = null,    // { lat, lng, label }
   simpleMode = false, // true = minimal overlays (just pins), for location picker
+  onRoadRoutes = null,
 }) {
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
+  const routeRequestIdRef = useRef(0);
   const markersRef = useRef([]);
   const polylinesRef = useRef([]);
   const circlesRef = useRef([]);
-  const directionsRendererRef = useRef(null);
-  const [routeStatus, setRouteStatus] = useState('idle'); // 'idle' | 'loading' | 'ok' | 'local_graph' | 'unavailable'
 
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
   // 'idle' | 'loading' | 'loaded' | 'error' | 'no_key'
@@ -63,6 +69,12 @@ export function GoogleMapsTownshipView({
 
     return () => { cancelled = true; };
   }, [apiKey]);
+
+  useEffect(() => {
+    if ((loadState === 'no_key' || loadState === 'error') && fromPin && toPin) {
+      onRoadRoutes?.(null, 1);
+    }
+  }, [loadState, fromPin, toPin, onRoadRoutes]);
 
   // ── Step 2: Init map once script is loaded AND div is in the DOM ───────────
   useEffect(() => {
@@ -128,7 +140,6 @@ export function GoogleMapsTownshipView({
     }
 
     mapInstanceRef.current = map;
-    renderOverlays(maps, map);
 
     const resizeObserver = new ResizeObserver(() => {
       if (!mapInstanceRef.current) return;
@@ -147,38 +158,84 @@ export function GoogleMapsTownshipView({
 
   // ── Helpers ────────────────────────────────────────────────────────────────
   const clearMapObjects = () => {
+    routeRequestIdRef.current += 1;
     markersRef.current.forEach((m) => m.setMap(null));
     markersRef.current = [];
     polylinesRef.current.forEach((p) => p.setMap(null));
     polylinesRef.current = [];
     circlesRef.current.forEach((c) => c.setMap(null));
     circlesRef.current = [];
-    if (directionsRendererRef.current) {
-      directionsRendererRef.current.setMap(null);
-      directionsRendererRef.current = null;
-    }
   };
 
-  const drawLocalPedestrianRoute = (maps, map, startPin, endPin) => {
+  const drawWalkingRoutes = async (maps, map, startPin, endPin, onRoutes, useRouteCorridors = false) => {
     if (!startPin || !endPin) return;
-    const result = findPedestrianRoute(
-      { lat: startPin.lat, lng: startPin.lng },
-      { lat: endPin.lat, lng: endPin.lng }
-    );
-    if (result && result.path && result.path.length >= 2) {
-      const polyline = new maps.Polyline({
-        path: result.path,
-        geodesic: true,
-        strokeColor: '#2864A6',
-        strokeOpacity: 0.9,
-        strokeWeight: 5,
-        map,
-        zIndex: 15,
-      });
-      polylinesRef.current.push(polyline);
-      setRouteStatus('local_graph');
-    } else {
-      setRouteStatus('unavailable');
+    const requestId = routeRequestIdRef.current;
+    try {
+      const cacheKey = JSON.stringify([
+        useRouteCorridors ? 'corridors' : 'direct',
+        startPin.lat,
+        startPin.lng,
+        endPin.lat,
+        endPin.lng,
+      ]);
+      let routePromise = WALKING_ROUTE_CACHE.get(cacheKey);
+      if (!routePromise) {
+        routePromise = (async () => {
+          const { Route } = await maps.importLibrary('routes');
+          if (useRouteCorridors) {
+            const routeRequests = Object.entries(ROUTE_WAYPOINTS).map(async ([routeId, waypoints]) => {
+              const { routes = [] } = await Route.computeRoutes({
+                origin: { lat: startPin.lat, lng: startPin.lng },
+                destination: { lat: endPin.lat, lng: endPin.lng },
+                intermediates: waypoints.map(({ lat, lng }) => ({
+                  location: { lat, lng },
+                })),
+                travelMode: 'WALKING',
+                fields: ['path', 'distanceMeters', 'durationMillis'],
+                computeAlternativeRoutes: false,
+              });
+              return routes
+                .filter(route => route.path?.length > 1)
+                .map(route => ({
+                  path: route.path,
+                  distanceMeters: route.distanceMeters,
+                  durationMillis: route.durationMillis,
+                  routeId,
+                }));
+            });
+            const settled = await Promise.allSettled(routeRequests);
+            const failedCount = settled.filter(result => result.status === 'rejected').length;
+            const routes = settled.flatMap((result, index) => {
+              if (result.status === 'fulfilled') return result.value;
+              console.error(
+                `[GoogleMapsTownshipView] Walking route ${['A', 'B', 'C'][index]} request failed.`,
+                result.reason
+              );
+              return [];
+            });
+            return { routes, failedCount };
+          }
+
+          const { routes = [] } = await Route.computeRoutes({
+            origin: { lat: startPin.lat, lng: startPin.lng },
+            destination: { lat: endPin.lat, lng: endPin.lng },
+            travelMode: 'WALKING',
+            fields: ['path', 'distanceMeters', 'durationMillis'],
+            computeAlternativeRoutes: true,
+          });
+          return { routes: routes.filter(route => route.path?.length > 1), failedCount: 0 };
+        })();
+        WALKING_ROUTE_CACHE.set(cacheKey, routePromise);
+      }
+
+      const { routes, failedCount } = await routePromise;
+      if (requestId !== routeRequestIdRef.current || mapInstanceRef.current !== map) return;
+      onRoutes(routes, failedCount);
+    } catch (error) {
+      if (requestId === routeRequestIdRef.current) {
+        console.error('[GoogleMapsTownshipView] Walking route request failed.', error);
+        onRoutes(null, 1);
+      }
     }
   };
 
@@ -227,28 +284,89 @@ export function GoogleMapsTownshipView({
         markersRef.current.push(marker);
       }
 
-      // In simpleMode (location picker), only show the origin and destination pins without any route line
-      setRouteStatus('idle');
+      if (fromPin && toPin) {
+        const bounds = new maps.LatLngBounds();
+        bounds.extend({ lat: fromPin.lat, lng: fromPin.lng });
+        bounds.extend({ lat: toPin.lat, lng: toPin.lng });
+        map.fitBounds(bounds, 40);
+        drawWalkingRoutes(maps, map, fromPin, toPin, (routes, failedCount) => {
+          if (onRoadRoutes) onRoadRoutes(routes, failedCount);
+          routes?.slice(0, 3).forEach((route, index) => {
+            const roadPolyline = new maps.Polyline({
+              path: route.path,
+              geodesic: true,
+              strokeColor: index === 0 ? '#2864A6' : index === 1 ? '#f59e0b' : '#10b981',
+              strokeOpacity: index === 0 ? 0.9 : 0.4,
+              strokeWeight: index === 0 ? 5 : 3,
+              map,
+              zIndex: index === 0 ? 15 : 10 - index,
+            });
+            polylinesRef.current.push(roadPolyline);
+          });
+          if (!routes?.[0]?.path) return;
+          const bounds = new maps.LatLngBounds();
+          routes[0].path.forEach(point => bounds.extend(point));
+          map.fitBounds(bounds, 40);
+        });
+      }
       return;
     }
 
     // ── Full mode: routes + nodes + hazards ───────────────────────────────────
     // 1. Draw Routes
-    ['A', 'B', 'C'].forEach((rId) => {
-      const isSelected = selectedRoute === rId;
-      const color = rId === 'A' ? '#10b981' : rId === 'B' ? '#f59e0b' : '#2864a6';
-
-      const polyline = new maps.Polyline({
-        path: ROUTE_GPS_PATHS[rId],
-        geodesic: true,
-        strokeColor: color,
-        strokeOpacity: isSelected ? 0.95 : 0.35,
-        strokeWeight: isSelected ? 6 : 3,
+    if (fromPin && toPin) {
+      const bounds = new maps.LatLngBounds();
+      bounds.extend({ lat: fromPin.lat, lng: fromPin.lng });
+      bounds.extend({ lat: toPin.lat, lng: toPin.lng });
+      const startMarker = new maps.Marker({
+        position: { lat: fromPin.lat, lng: fromPin.lng },
         map,
-        zIndex: isSelected ? 10 : 2,
+        title: 'Start location',
+        label: { text: 'S', color: '#ffffff', fontWeight: 'bold' },
+        zIndex: 30,
       });
-      polylinesRef.current.push(polyline);
-    });
+      const endMarker = new maps.Marker({
+        position: { lat: toPin.lat, lng: toPin.lng },
+        map,
+        title: 'Destination',
+        label: { text: 'D', color: '#ffffff', fontWeight: 'bold' },
+        zIndex: 30,
+      });
+      markersRef.current.push(startMarker, endMarker);
+      map.fitBounds(bounds, 40);
+
+      drawWalkingRoutes(maps, map, fromPin, toPin, (routes, failedCount) => {
+        if (onRoadRoutes) onRoadRoutes(routes, failedCount);
+        routes?.forEach((route, index) => {
+          const routeId = route.routeId || ['A', 'B', 'C'][index];
+          const isRouteSelected = selectedRoute === routeId;
+          const roadPolyline = new maps.Polyline({
+            path: route.path,
+            geodesic: true,
+            strokeColor: routeId === 'A' ? '#10b981' : routeId === 'B' ? '#f59e0b' : '#2864a6',
+            strokeOpacity: isRouteSelected ? 0.95 : 0.35,
+            strokeWeight: isRouteSelected ? 6 : 3,
+            map,
+            zIndex: isRouteSelected ? 10 : 2,
+          });
+          polylinesRef.current.push(roadPolyline);
+        });
+      }, true);
+    } else {
+      ['A', 'B', 'C'].forEach(routeId => {
+        const isRouteSelected = selectedRoute === routeId;
+        const roadPolyline = new maps.Polyline({
+          path: ROUTE_GPS_PATHS[routeId],
+          geodesic: true,
+          strokeColor: routeId === 'A' ? '#10b981' : routeId === 'B' ? '#f59e0b' : '#2864a6',
+          strokeOpacity: isRouteSelected ? 0.95 : 0.35,
+          strokeWeight: isRouteSelected ? 6 : 3,
+          map,
+          zIndex: isRouteSelected ? 10 : 2,
+        });
+        polylinesRef.current.push(roadPolyline);
+      });
+    }
 
     // 2. Draw Checkpoint Lamp Nodes
     Object.entries(NODE_COORDINATES).forEach(([nodeId, pos]) => {
@@ -318,7 +436,7 @@ export function GoogleMapsTownshipView({
     if (loadState === 'loaded' && window.google?.maps && mapInstanceRef.current) {
       renderOverlays(window.google.maps, mapInstanceRef.current);
     }
-  }, [selectedRoute, activeLamps, currentCheckpointNode, hazards, onSelectHazard, fromPin, toPin]);
+  }, [loadState, theme, selectedRoute, activeLamps, currentCheckpointNode, hazards, onSelectHazard, fromPin, toPin, onRoadRoutes]);
 
   // ── Render ─────────────────────────────────────────────────────────────────
   // Always render the map container div so mapContainerRef.current is available.
@@ -341,6 +459,7 @@ export function GoogleMapsTownshipView({
           showLegend={false}
           showOverlayLabels={showOverlayLabels}
           showHeader={showHeader}
+          hideRoutes={Boolean(fromPin && toPin)}
         />
       </div>
     );
@@ -363,13 +482,6 @@ export function GoogleMapsTownshipView({
         </div>
       )}
 
-      {/* Route calculation & pedestrian status badges */}
-      {simpleMode && routeStatus === 'unavailable' && (
-        <div className="absolute bottom-2 left-2 z-10 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-600/90 text-white shadow-md backdrop-blur-sm">
-          <span className="w-1.5 h-1.5 rounded-full bg-white" />
-          <span className="text-[10px] font-semibold">Walking route unavailable between selected points</span>
-        </div>
-      )}
     </div>
   );
 }

@@ -518,7 +518,7 @@ export function HazardReportView() {
             className="p-3 rounded-xl border border-dashed border-slate-300 hover:border-slate-400 bg-slate-50 cursor-pointer text-center text-xs text-slate-600 flex items-center justify-center gap-2 transition"
           >
             <Camera className="w-4 h-4 text-slate-400" />
-            <span>{photoAttached ? 'âœ“ Photo Attached: inspection_site.jpg' : 'Attach Photo (Optional)'}</span>
+            <span>{photoAttached ? 'Photo Attached: inspection_site.jpg' : 'Attach Photo (Optional)'}</span>
           </div>
 
           {/* Submit */}

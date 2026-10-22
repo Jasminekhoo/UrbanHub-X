@@ -64,6 +64,7 @@ export function NightSafeProvider({ children }) {
   const [journeyStatus, setJourneyStatus] = useState('idle'); // 'idle' | 'in_progress' | 'ended'
   const [journeyOrigin, setJourneyOrigin] = useState('The Eighth, Elmina Green');
   const [journeyDestination, setJourneyDestination] = useState('Elmina Lakeside Mall');
+  const [demoRouteFallback, setDemoRouteFallback] = useState(false);
   const [checkpointIndex, setCheckpointIndex] = useState(0);
   const [passedCheckpoints, setPassedCheckpoints] = useState(['L-01']);
   const [missedCheckpointPrompt, setMissedCheckpointPrompt] = useState(false);
@@ -307,7 +308,12 @@ export function NightSafeProvider({ children }) {
     const route = SCHEMATIC_ROUTES[routeId];
     setActiveLamps(route.nodes.slice(0, 3)); // track first few nodes for checkpoint display
     setResidentTab('journey');
-    showToast(`Journey started along ${route.name}.`, 'success');
+    showToast(
+      journeyOrigin && journeyDestination
+        ? `Walking route started to ${journeyDestination}.`
+        : `Journey started along ${route.name}.`,
+      'success'
+    );
   };
 
   // Simulate passing checkpoint (e.g. L-03)
@@ -729,6 +735,7 @@ export function NightSafeProvider({ children }) {
     setPropertyTab('overview');
     setSelectedRouteId('A');
     setJourneyStatus('idle');
+    setDemoRouteFallback(false);
     setCheckpointIndex(0);
     setPassedCheckpoints(['L-01']);
     setMissedCheckpointPrompt(false);
@@ -792,6 +799,8 @@ export function NightSafeProvider({ children }) {
         setJourneyOrigin,
         journeyDestination,
         setJourneyDestination,
+        demoRouteFallback,
+        setDemoRouteFallback,
         checkpointIndex,
         passedCheckpoints,
         missedCheckpointPrompt,

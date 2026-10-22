@@ -2,6 +2,8 @@
 
 UrbanHub-X is a role-based community safety and property-operations prototype for the City of Elmina. It brings resident safety tools, security incident response, and property hazard management into one browser app.
 
+**Live deployment:** [urban-hub-x-sdp.vercel.app](https://urban-hub-x-sdp.vercel.app/)
+
 > **Prototype notice:** This project is a demonstration, not a production emergency-response or property-management service. It uses seeded and simulated data, and it does not provide real emergency dispatch, live resident tracking, a remote database, or authenticated access control.
 
 ## Features
